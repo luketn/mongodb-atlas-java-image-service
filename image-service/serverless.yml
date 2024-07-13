@@ -11,6 +11,8 @@ plugins:
 
 functions:
   image-process:
+    environment:
+      CONNECTION_STRING: ${env:ATLAS_LUKE_CONNECTION_STRING}
     url:
       cors: true
     image: "204244381428.dkr.ecr.ap-southeast-2.amazonaws.com/image-service:${env:DOCKER_TAG, 'latest'}"
