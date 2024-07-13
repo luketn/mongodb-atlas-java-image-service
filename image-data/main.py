@@ -6,7 +6,7 @@ from transformers import AutoProcessor, AutoModelForCausalLM
 from PIL import Image
 
 
-QUICK_RUN = False
+QUICK_RUN = True
 
 model_id = 'microsoft/Florence-2-large'
 model = AutoModelForCausalLM.from_pretrained(model_id, trust_remote_code=True).eval().cuda()
@@ -31,10 +31,10 @@ if os.path.exists("photo-results.json"):
     last_run_filename = "last-run-" + datetime.now().strftime("%Y%m%d-%H%M%S") + ".json"
     os.rename("photo-results.json", last_run_filename)
 
-    # create a map from url to photo object
+    # create a map from filename to photo object
     last_run_map = {}
     for photo in last_run_captions['photos']:
-        last_run_map[photo['url']] = photo
+        last_run_map[photo['filename']] = photo
 else:
     last_run_captions = None
     last_run_map = {}
@@ -43,7 +43,7 @@ photos_detailed_captions = []
 
 folder = "photos/"
 # Count the number of .jpg photos in the folder
-num_photos = len([f for f in os.listdir(folder) if (f.endswith('.jpg') or f.endswith('.png'))])
+num_photos = len(path_data)
 
 def write_results_to_file():
     with open("photo-results.json", "w") as f:
@@ -85,11 +85,11 @@ total_time_start = datetime.now()
 
 # iterate all the photo objects in the JSON
 for photo in path_data:
-    url = photo['url']
+    filename = photo['filename']
 
     # skip if we have already processed this photo
-    if url in last_run_map:
-        photo_last_run = last_run_map[url]
+    if filename in last_run_map:
+        photo_last_run = last_run_map[filename]
         time_taken_seconds = photo_last_run['caption_time_seconds']
         if 'error' in photo_last_run:
             error = photo_last_run['error']
@@ -97,35 +97,27 @@ for photo in path_data:
         elif 'caption' in photo_last_run:
             caption = photo_last_run['caption']
             error = None
-        filename = photo_last_run['filename']
-        path = photo_last_run['path']
     else:
-        # convert the URL to a file path rooted at photos/
-        # with the prefix companyId_lastSegmentOfUrl
-        # e.g. photos/869327_667dbb145f353f037e4fb05d-40516.jpg
-        filename = url.split('/')[-1]
-        path = folder + filename
-
         # continue if the file does not exist
-        if not os.path.exists(path):
-            print("File does not exist:", path)
+        if not os.path.exists(filename):
+            print("File does not exist:", filename)
             continue
 
         try:
             # if a png, convert to jpg
-            if path.endswith('.png'):
+            if filename.endswith('.png'):
                 # check we haven't already converted to jpg
-                if os.path.exists(path.replace('.png', '.jpg')):
-                    path = path.replace('.png', '.jpg')
+                if os.path.exists(filename.replace('.png', '.jpg')):
+                    filename = filename.replace('.png', '.jpg')
                 else:
-                    im = Image.open(path)
+                    im = Image.open(filename)
                     im = im.convert('RGB')
-                    im.save(path.replace('.png', '.jpg'))
-                    path = path.replace('.png', '.jpg')
+                    im.save(filename.replace('.png', '.jpg'))
+                    filename = filename.replace('.png', '.jpg')
 
-            image = Image.open(path)
+            image = Image.open(filename)
         except Exception as e:
-            print(f"Error opening {path}: {str(e)}")
+            print(f"Error opening {filename}: {str(e)}")
             continue
 
         # time the following
@@ -137,7 +129,7 @@ for photo in path_data:
             caption = caption.strip()
             error = None
         except Exception as e:
-            print(f"Error processing {url}: {str(e)}")
+            print(f"Error processing {filename}: {str(e)}")
             caption = None
             error = str(e)
 
@@ -148,8 +140,6 @@ for photo in path_data:
     photo_with_caption = {
         'caption_time_seconds': time_taken_seconds,
         'filename': filename,
-        'url': url,
-        'path': path,
     }
     if error is not None:
         photo_with_caption['error'] = error
