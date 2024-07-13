@@ -1,0 +1,2 @@
+./build.sh
+./debug.sh

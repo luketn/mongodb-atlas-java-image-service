@@ -1,0 +1,16 @@
+service: image-service
+
+provider:
+  name: aws
+  region: ap-southeast-2
+  profile: personal
+  architecture: arm64
+
+plugins:
+  - serverless-better-credentials
+
+functions:
+  image-process:
+    url:
+      cors: true
+    image: "204244381428.dkr.ecr.ap-southeast-2.amazonaws.com/image-service:${env:DOCKER_TAG, 'latest'}"
