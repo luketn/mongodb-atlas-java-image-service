@@ -1,0 +1,7 @@
+transformers
+torch
+packaging
+wheel
+flash_attn
+pillow
+timm
