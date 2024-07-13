@@ -6,7 +6,7 @@ from transformers import AutoProcessor, AutoModelForCausalLM
 from PIL import Image
 
 
-QUICK_RUN = True
+QUICK_RUN = False
 
 model_id = 'microsoft/Florence-2-large'
 model = AutoModelForCausalLM.from_pretrained(model_id, trust_remote_code=True).eval().cuda()
