@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 
 public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResponse> {
     public static final String CONNECTION_STRING = System.getenv("CONNECTION_STRING") != null ? System.getenv("CONNECTION_STRING") : "mongodb://localhost:27017";
+    public static final MongoClient MONGO_CLIENT = MongoClients.create(CONNECTION_STRING);
 
     public record Photo(String caption, String filename) {}
 
@@ -41,17 +42,15 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                         //get the caption query string parameter
                         String caption = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("caption", "No caption");
 
-                        MongoClient mongoClient = MongoClients.create(CONNECTION_STRING);
-                        MongoDatabase imageSearch = mongoClient.getDatabase("ImageSearch");
+                        //Get the MongoDB collection
+                        MongoDatabase imageSearch = MONGO_CLIENT.getDatabase("ImageSearch");
                         MongoCollection<Photo> photosCollection = imageSearch.getCollection("photos", Photo.class);
 
+                        //Perform Atlas Search query
                         AggregateIterable<Photo> photosIterator = photosCollection.aggregate(AtlasSearchBuilder.builder()
                                 .withCaption(caption)
-                                .build(
-                                        Aggregates.limit(5)
-                                )
+                                .build(Aggregates.limit(5))
                         );
-
                         ArrayList<Photo> photos = photosIterator.into(new ArrayList<>());
 
                         //serialise to JSON
