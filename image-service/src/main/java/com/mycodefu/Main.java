@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
 import com.mongodb.client.*;
 import com.mongodb.client.model.Aggregates;
+import com.mongodb.client.model.Field;
 import com.mycodefu.atlas.AtlasSearchBuilder;
 import org.bson.*;
 import org.bson.conversions.Bson;
@@ -55,11 +56,20 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                             MongoCollection<BsonDocument> photosCollection = imageSearch.getCollection("photo", BsonDocument.class);
 
                             //Perform Atlas Search query
+                            if ((caption == null || caption.isEmpty()) && hasPerson == null) {
+                                return APIGatewayV2HTTPResponse.builder()
+                                        .withStatusCode(400)
+                                        .withBody("Must provide at least one query parameter")
+                                        .build();
+                            }
                             List<Bson> query = AtlasSearchBuilder.builder()
                                     .withCaption(caption)
                                     .hasPerson(hasPerson)
                                     .build(
                                             Aggregates.limit(5),
+                                            Aggregates.addFields(
+                                                    new Field<>("id", new Document("$toString", "$_id"))
+                                            ),
                                             Aggregates.project(
                                                     new Document()
                                                             .append("_id", 0)

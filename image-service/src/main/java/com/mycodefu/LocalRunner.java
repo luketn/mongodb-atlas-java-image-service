@@ -46,12 +46,17 @@ public class LocalRunner {
 
                 if (response.getHeaders() == null) {
                     response.setHeaders(
-                            Map.of("Content-Type", "application/json")
+                            Map.of(
+                                    "Content-Type", "application/json",
+                                    "Access-Control-Allow-Origin", "*",
+                                    "Access-Control-Allow-Methods", "GET, POST, OPTIONS"
+
+                            )
                     );
                 }
                 response.getHeaders().forEach((key, value) -> exchange.getResponseHeaders().add(key, value));
                 if (response.getBody().isEmpty()) {
-                    exchange.sendResponseHeaders(200, -1);
+                    exchange.sendResponseHeaders(response.getStatusCode(), -1);
                 } else {
                     byte[] bytes;
                     if (response.getIsBase64Encoded()) {
@@ -59,7 +64,7 @@ public class LocalRunner {
                     } else {
                         bytes = response.getBody().getBytes(StandardCharsets.UTF_8);
                     }
-                    exchange.sendResponseHeaders(200, bytes.length);
+                    exchange.sendResponseHeaders(response.getStatusCode(), bytes.length);
                     exchange.getResponseBody().write(bytes);
                 }
                 exchange.close();
