@@ -35,7 +35,7 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
         //return cacheable options
         String method = apiGatewayV2HTTPEvent.getRequestContext().getHttp().getMethod();
         String path = apiGatewayV2HTTPEvent.getRequestContext().getHttp().getPath();
-        if (path.endsWith("/")) {
+        if (path.length() > 1 && path.endsWith("/")) {
             path = path.substring(0, path.length() - 1);
         }
 
