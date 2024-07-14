@@ -9,9 +9,7 @@ from PIL import Image
 
 QUICK_RUN = False
 
-
-kwargs = {}
-kwargs['torch_dtype'] = torch.bfloat16
+kwargs = {'torch_dtype': torch.bfloat16}
 model_id = "microsoft/Phi-3-vision-128k-instruct"
 
 processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=True)
@@ -100,17 +98,19 @@ for photo in path_data:
     # skip if we have already processed this photo
     if filename in last_run_map:
         photo_last_run = last_run_map[filename]
-        time_taken_seconds = photo_last_run['caption_time_seconds']
+        time_taken_seconds = photo_last_run['time_taken_seconds']
         if 'error' in photo_last_run:
             error = photo_last_run['error']
             info = None
-        elif 'caption' in photo_last_run:
-            info = photo_last_run['caption']
+        elif 'info' in photo_last_run:
+            info = photo_last_run['info']
             error = None
+        else:
+            raise Exception("Invalid data in last run")
     else:
         # continue if the file does not exist
         if not os.path.exists(filename):
-            print("File does not exist:", filename)
+            print(f"Image file {filename} does not exist.")
             continue
 
         try:
@@ -142,7 +142,7 @@ for photo in path_data:
             message = f'Produce only JSON from the image "{breed_filename}" in the ImageInfo structure:\n' \
                    '```\n' \
                    'interface Dog {\n' \
-                   '  colour: string;\n' \
+                   '  colour: string[];\n' \
                    '  size: "Small" | "Medium" | "Large";\n' \
                    '  breed: string;\n' \
                    '}\n' \
@@ -155,6 +155,24 @@ for photo in path_data:
 
             info = run_phi3_vision(message)
             error = None
+
+            # fix capitalization of colour + breed
+            if info and 'dogs' in info:
+                for dog in info['dogs']:
+                    if 'breed' in dog:
+                        dog['breed'] = dog['breed'].title()
+                    if 'colour' in dog:
+                        fixed_colours = []
+                        did_fix = False
+                        for colour in dog['colour']:
+                            fixed_colour = colour.title()
+                            fixed_colours.append(fixed_colour)
+                            if colour != fixed_colour:
+                                did_fix = True
+                        if did_fix:
+                            dog['colour'] = fixed_colours
+
+
         except Exception as e:
             print(f"Error processing {filename}: {str(e)}")
             info = None
@@ -165,7 +183,7 @@ for photo in path_data:
 
 
     photo_with_caption = {
-        'caption_time_seconds': time_taken_seconds,
+        'time_taken_seconds': time_taken_seconds,
         'filename': filename,
     }
     if error is not None:
