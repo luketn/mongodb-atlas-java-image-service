@@ -102,8 +102,10 @@ for photo in path_data:
         if 'error' in photo_last_run:
             error = photo_last_run['error']
             info = None
-        elif 'info' in photo_last_run:
+            url = None
+        elif 'info' in photo_last_run and 'url' in photo_last_run:
             info = photo_last_run['info']
+            url = photo_last_run['url']
             error = None
         else:
             raise Exception("Invalid data in last run")
@@ -154,6 +156,7 @@ for photo in path_data:
                    '```'
 
             info = run_phi3_vision(message)
+            url = f'https://image-search.mycodefu.com/{filename}'
             error = None
 
             # fix capitalization of colour + breed
@@ -176,6 +179,7 @@ for photo in path_data:
         except Exception as e:
             print(f"Error processing {filename}: {str(e)}")
             info = None
+            url = None
             error = str(e)
 
         end = datetime.now()
@@ -184,12 +188,14 @@ for photo in path_data:
 
     photo_with_caption = {
         'time_taken_seconds': time_taken_seconds,
-        'filename': filename,
+        'url': url,
     }
     if error is not None:
         photo_with_caption['error'] = error
     if info is not None:
         photo_with_caption['info'] = info
+
+    photo_with_caption['filename'] = filename
 
     print(json.dumps(photo_with_caption))
 
