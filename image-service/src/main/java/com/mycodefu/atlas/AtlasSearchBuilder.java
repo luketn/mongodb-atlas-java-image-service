@@ -10,6 +10,7 @@ import java.util.List;
 import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.search.SearchOperator.*;
 import static com.mycodefu.atlas.AtlasSearchUtils.fuzzyText;
+import static com.mycodefu.atlas.AtlasSearchUtils.isEqual;
 
 public class AtlasSearchBuilder {
     final List<SearchOperator> must = new ArrayList<>();
@@ -44,7 +45,16 @@ public class AtlasSearchBuilder {
     }
 
     public AtlasSearchBuilder withCaption(String caption) {
-        must.add(fuzzyText("caption", caption));
+        if (caption != null && !caption.isEmpty()) {
+            must.add(fuzzyText("caption", caption));
+        }
+        return this;
+    }
+
+    public AtlasSearchBuilder hasPerson(Boolean hasPerson) {
+        if (hasPerson != null) {
+            must.add(isEqual("hasPerson", hasPerson));
+        }
         return this;
     }
 }

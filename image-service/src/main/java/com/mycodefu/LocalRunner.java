@@ -23,6 +23,7 @@ public class LocalRunner {
                         .withRequestContext(APIGatewayV2HTTPEvent.RequestContext.builder()
                                 .withHttp(APIGatewayV2HTTPEvent.RequestContext.Http.builder()
                                         .withMethod(exchange.getRequestMethod())
+                                        .withPath(exchange.getRequestURI().getPath())
                                         .build())
                                 .build());
 
@@ -43,6 +44,11 @@ public class LocalRunner {
 
                 APIGatewayV2HTTPResponse response = main.handleRequest(event, null);
 
+                if (response.getHeaders() == null) {
+                    response.setHeaders(
+                            Map.of("Content-Type", "application/json")
+                    );
+                }
                 response.getHeaders().forEach((key, value) -> exchange.getResponseHeaders().add(key, value));
                 if (response.getBody().isEmpty()) {
                     exchange.sendResponseHeaders(200, -1);

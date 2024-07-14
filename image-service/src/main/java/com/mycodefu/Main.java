@@ -7,10 +7,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
 import com.mongodb.client.*;
 import com.mongodb.client.model.Aggregates;
 import com.mycodefu.atlas.AtlasSearchBuilder;
-import org.bson.BsonArray;
-import org.bson.BsonDocument;
-import org.bson.BsonString;
-import org.bson.BsonValue;
+import org.bson.*;
+import org.bson.conversions.Bson;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -26,7 +24,9 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
     public static final String CONNECTION_STRING = System.getenv("CONNECTION_STRING") != null ? System.getenv("CONNECTION_STRING") : "mongodb://localhost:27017";
     public static final MongoClient MONGO_CLIENT = MongoClients.create(CONNECTION_STRING);
 
-    public record Photo(String caption, String filename) {}
+//    public enum DogSize {Small, Medium, Large}
+//    public record Dog(List<String> colour, String breed, DogSize size) {}
+//    public record Photo(String caption, String url, Boolean hasPerson, List<Dog> dogs) {}
 
     @Override
     public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent apiGatewayV2HTTPEvent, Context context) {
@@ -35,36 +35,55 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
         //return cacheable options
         String method = apiGatewayV2HTTPEvent.getRequestContext().getHttp().getMethod();
         String path = apiGatewayV2HTTPEvent.getRequestContext().getHttp().getPath();
+        if (path.endsWith("/")) {
+            path = path.substring(0, path.length() - 1);
+        }
+
         switch(method) {
             case "GET": {
                 switch (path) {
                     case "/photos": {
-                        //get the caption query string parameter
-                        String caption = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("caption", "No caption");
+                        String json;
+                        try {
+                            //get the caption query string parameter
+                            String caption = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("caption", null);
+                            String hasPersonString = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("hasPerson", null);
+                            Boolean hasPerson = hasPersonString != null ? Boolean.parseBoolean(hasPersonString) : null;
 
-                        //Get the MongoDB collection
-                        MongoDatabase imageSearch = MONGO_CLIENT.getDatabase("ImageSearch");
-                        MongoCollection<Photo> photosCollection = imageSearch.getCollection("photos", Photo.class);
+                            //Get the MongoDB collection
+                            MongoDatabase imageSearch = MONGO_CLIENT.getDatabase("ImageSearch");
+                            MongoCollection<BsonDocument> photosCollection = imageSearch.getCollection("photo", BsonDocument.class);
 
-                        //Perform Atlas Search query
-                        AggregateIterable<Photo> photosIterator = photosCollection.aggregate(AtlasSearchBuilder.builder()
-                                .withCaption(caption)
-                                .build(Aggregates.limit(5))
-                        );
-                        ArrayList<Photo> photos = photosIterator.into(new ArrayList<>());
+                            //Perform Atlas Search query
+                            List<Bson> query = AtlasSearchBuilder.builder()
+                                    .withCaption(caption)
+                                    .hasPerson(hasPerson)
+                                    .build(
+                                            Aggregates.limit(5),
+                                            Aggregates.project(
+                                                    new Document()
+                                                            .append("_id", 0)
+                                                            .append("runData", 0)
+                                            )
+                                    );
 
-                        //serialise to JSON
-                        List<BsonValue> bsonPhotoList = photos.stream().map(photo -> {
-                            BsonDocument bsonPhoto = new BsonDocument();
-                            bsonPhoto.append("caption", new BsonString(photo.caption()));
-                            String url = "https://image-search.mycodefu.com/" + photo.filename();
-                            bsonPhoto.append("url", new BsonString(url));
-                            return bsonPhoto;
-                        }).collect(Collectors.toList());
-                        BsonDocument bsonDocument = new BsonDocument(
-                                "photos", new BsonArray(bsonPhotoList)
-                        );
-                        String json = bsonDocument.toJson();
+                            //Log the query
+                            System.out.println("db.photo.aggregate([");
+                            query.forEach(bson -> System.out.println(bson.toBsonDocument().toJson()));
+                            System.out.println("])");
+
+                            AggregateIterable<BsonDocument> photosIterator = photosCollection.aggregate(query);
+                            ArrayList<BsonDocument> photos = photosIterator.into(new ArrayList<>());
+
+                            //serialise to JSON
+                            BsonDocument bsonDocument = new BsonDocument("photos", new BsonArray(photos));
+                            json = bsonDocument.toJson();
+                        } catch (Exception e) {
+                            return APIGatewayV2HTTPResponse.builder()
+                                    .withStatusCode(500)
+                                    .withBody("Error: " + e.getMessage())
+                                    .build();
+                        }
 
                         return APIGatewayV2HTTPResponse.builder()
                                 .withStatusCode(200)
