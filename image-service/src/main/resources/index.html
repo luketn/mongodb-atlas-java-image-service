@@ -102,7 +102,9 @@
         FormControlLabel,
         FormControl,
         TextField,
-        Button
+        Button,
+        Box,
+
     } = MaterialUI;
     const { DragDropContext, Droppable, Draggable } = window.ReactBeautifulDnd;
 
@@ -111,8 +113,10 @@
         const [photos, setPhotos] = useState([]);
 
         //call the service /photos/?caption=123
+        console.log('document.location.host', document.location.host)
+        const domain = document.location.host.indexOf('localhost') === 0 ? 'http://localhost:8001' : '';
         useEffect(() => {
-            fetch(`http://localhost:8001/photos/?caption=${captionQuery}`)
+            fetch(`${domain}/photos/?caption=${captionQuery}`)
                 .then(response => {
                     if (response.status === 400) {
                         return {photos: []};
@@ -148,6 +152,11 @@
                         {photos.map(photo => (
                             <Card key={photo.caption}>
                                 <CardContent>
+                                    <Box
+                                        component="img"
+                                        alt={photo.caption}
+                                        src={photo.url}
+                                    />
                                     <Typography variant="h5" component="h2">
                                         {photo.caption}
                                     </Typography>

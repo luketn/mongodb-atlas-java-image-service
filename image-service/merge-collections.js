@@ -40,3 +40,23 @@ db.getSiblingDB('ImageSearch').getCollection('photos').aggregate([
 ]);
 db.getSiblingDB('ImageSearch').getCollection('photos').drop();
 db.getSiblingDB('ImageSearch').getCollection('photoinfo').drop();
+
+//patch the collection with the url field based on combining a string field 'runData.filename' with a constant string https://image-search.mycodefu.com/
+db.getSiblingDB('ImageSearch').getCollection("photo").updateMany(
+    { url: { $exists: false } },
+    [
+        {
+            $set: {
+                url: {
+                    $function: {
+                        body: function(filename) {
+                            return "https://image-search.mycodefu.com/" + filename;
+                        },
+                        args: ["$runData.filename"],
+                        lang: "js"
+                    }
+                }
+            }
+        }
+    ]
+);
