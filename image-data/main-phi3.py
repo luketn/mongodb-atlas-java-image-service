@@ -15,7 +15,7 @@ kwargs['torch_dtype'] = torch.bfloat16
 model_id = "microsoft/Phi-3-vision-128k-instruct"
 
 processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=True)
-model = AutoModelForCausalLM.from_pretrained(model_id, trust_remote_code=True, torch_dtype="auto").cuda()
+model = AutoModelForCausalLM.from_pretrained(model_id, device_map="cuda", trust_remote_code=True, torch_dtype="auto", _attn_implementation='flash_attention_2') # use _attn_implementation='eager' to disable flash attention
 
 user_prompt = '<|user|>\n'
 assistant_prompt = '<|assistant|>\n'
@@ -67,9 +67,6 @@ write_results_to_file()
 
 def run_phi3_vision(task):
     prompt = f"{user_prompt}<|image_1|>\n{task}{prompt_suffix}{assistant_prompt}"
-
-    url = "https://g.foolcdn.com/editorial/images/767633/nvidiadatacenterrevenuefy2017tofy2024.png"
-
     inputs = processor(prompt, image, return_tensors="pt").to("cuda:0")
 
     generate_ids = model.generate(**inputs,
@@ -81,6 +78,7 @@ def run_phi3_vision(task):
     response = processor.batch_decode(generate_ids,
                                       skip_special_tokens=True,
                                       clean_up_tokenization_spaces=False)[0]
+
     # strip out the ```{json} start line and ``` end line
     response = response.strip()
     response = response[response.find("{"):]
@@ -135,19 +133,27 @@ for photo in path_data:
         # time the following
         start = datetime.now()
         try:
-            info = run_phi3_vision('Produce only JSON from the image in the ImageInfo structure:\n'
-                                     '```\n'
-                                     'interface Dog {\n'
-                                        '  colour: string;\n'
-                                        '  size: "Small" | "Medium" | "Large";\n'
-                                        '  description: string;\n'
-                                    '}\n'
-                                     'interface ImageInfo {\n'
-                                        '  detailedCaption: string;\n'
-                                        '  dogs: Dog[];\n'
-                                     '}\n'
-                                     '```'
-            )
+            # get the third segment of the filename '/' delimited
+            breed_filename=filename.split('/')[2]
+            # get the folder without the first segment, '-' delimited
+            breed_filename=breed_filename.split('-')[1]
+            breed_filename=breed_filename+'.jpg'
+
+            message = f'Produce only JSON from the image "{breed_filename}" in the ImageInfo structure:\n' \
+                   '```\n' \
+                   'interface Dog {\n' \
+                   '  colour: string;\n' \
+                   '  size: "Small" | "Medium" | "Large";\n' \
+                   '  breed: string;\n' \
+                   '}\n' \
+                   'interface ImageInfo {\n' \
+                   '  detailedCaption: string;\n' \
+                   '  hasPerson: boolean;\n' \
+                   '  dogs: Dog[];\n' \
+                   '}\n' \
+                   '```'
+
+            info = run_phi3_vision(message)
             error = None
         except Exception as e:
             print(f"Error processing {filename}: {str(e)}")
