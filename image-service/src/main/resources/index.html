@@ -104,7 +104,7 @@
         TextField,
         Button,
         Box,
-
+        Grid,
     } = MaterialUI;
     const { DragDropContext, Droppable, Draggable } = window.ReactBeautifulDnd;
 
@@ -113,7 +113,6 @@
         const [photos, setPhotos] = useState([]);
 
         //call the service /photos/?caption=123
-        console.log('document.location.host', document.location.host)
         const domain = document.location.host.indexOf('localhost') === 0 ? 'http://localhost:8001' : '';
         useEffect(() => {
             fetch(`${domain}/photos/?caption=${captionQuery}`)
@@ -135,8 +134,8 @@
             <div
                 tabIndex="0"
             >
-                <Card>
-                    <CardContent>
+                <Grid container spacing={2}>
+                    <Grid item xs={12}>
                         <Typography variant="h5" component="h2">
                             Welcome to MongoDB Atlas Search Service
                         </Typography>
@@ -148,27 +147,36 @@
                             value={captionQuery}
                             onChange={(e) => setCaptionQuery(e.target.value)}
                         />
+                    </Grid>
+                </Grid>
+
 
                         {photos.map(photo => (
                             <Card key={photo.caption}>
                                 <CardContent>
-                                    <Box
-                                        component="img"
-                                        alt={photo.caption}
-                                        src={photo.url}
-                                    />
-                                    <Typography variant="h5" component="h2">
-                                        {photo.caption}
-                                    </Typography>
-                                    <Typography variant="body2" component="p">
-                                        {photo.hasPerson ? "Has Person" : "No Person"}
-                                    </Typography>
+                                    <Grid container spacing={2}>
+                                        <Grid item xs={2}>
+                                        <Box
+                                            component="img"
+                                            sx={{ maxWidth: 200 }}
+                                            alt={photo.caption}
+                                            src={photo.url}
+                                        />
+                                        </Grid>
+                                        <Grid item xs={9}>
+                                        <Typography variant="body1" component="h2">
+                                            {photo.caption}
+                                        </Typography>
+                                        </Grid>
+                                        <Grid item xs={1}>
+                                        <Typography variant="body2" component="p">
+                                            {photo.hasPerson ? "Has Person" : "No Person"}
+                                        </Typography>
+                                        </Grid>
+                                    </Grid>
                                 </CardContent>
                             </Card>
                         ))}
-
-                    </CardContent>
-                </Card>
             </div>
         );
     }
