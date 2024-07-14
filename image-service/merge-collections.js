@@ -48,13 +48,10 @@ db.getSiblingDB('ImageSearch').getCollection("photo").updateMany(
         {
             $set: {
                 url: {
-                    $function: {
-                        body: function(filename) {
-                            return "https://image-search.mycodefu.com/" + filename;
-                        },
-                        args: ["$runData.filename"],
-                        lang: "js"
-                    }
+                    $concat: [
+                        "https://image-search.mycodefu.com/",
+                        "$runData.filename"
+                    ]
                 }
             }
         }
