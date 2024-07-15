@@ -10,6 +10,8 @@ import com.mongodb.client.model.Field;
 import com.mycodefu.atlas.AtlasSearchBuilder;
 import org.bson.*;
 import org.bson.conversions.Bson;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -23,8 +25,20 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResponse> {
-    public static final String CONNECTION_STRING = System.getenv("CONNECTION_STRING") != null ? System.getenv("CONNECTION_STRING") : "mongodb://localhost:27017";
-    public static final MongoClient MONGO_CLIENT = MongoClients.create(CONNECTION_STRING);
+    public static final String CONNECTION_STRING = System.getenv("CONNECTION_STRING") != null ? System.getenv("CONNECTION_STRING") : "mongodb://localhost:27017/directConnection=true";
+    private static final Logger log = LoggerFactory.getLogger(Main.class);
+
+    private static MongoClient connect() {
+        long start = System.currentTimeMillis();
+        MongoClient mongoClient = MongoClients.create(CONNECTION_STRING);
+        long end = System.currentTimeMillis();
+
+        log.info("Connected to MongoDB at {} in {}ms", CONNECTION_STRING.replaceAll("://.*@", "://<redacted>@"), end - start);
+        return mongoClient;
+    }
+    public static final MongoClient MONGO_CLIENT = connect();
+
+
 
 //    public enum DogSize {Small, Medium, Large}
 //    public record Dog(List<String> colour, String breed, DogSize size) {}
@@ -32,7 +46,9 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
 
     @Override
     public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent apiGatewayV2HTTPEvent, Context context) {
-        System.out.println("Received request:\n" + apiGatewayV2HTTPEvent);
+        if (log.isTraceEnabled()) {
+            log.trace("Received request:\n{}", apiGatewayV2HTTPEvent);
+        }
 
         //return cacheable options
         String method = apiGatewayV2HTTPEvent.getRequestContext().getHttp().getMethod();
@@ -111,9 +127,20 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                                     );
 
                             //Log the query
-                            System.out.println("db.photo.aggregate([");
-                            query.forEach(bson -> System.out.println(bson.toBsonDocument().toJson()));
-                            System.out.println("])");
+                            if (log.isTraceEnabled()) {
+                                var aggregateClauses = query
+                                        .stream()
+                                        .map(bson -> bson.toBsonDocument().toJson())
+                                        .collect(Collectors.joining(",\n    "))
+                                        ;
+                                log.trace("""
+                                        Atlas Search query:
+                                          db.photo.aggregate([
+                                            %s
+                                          ])
+                                        """.formatted(aggregateClauses)
+                                );
+                            }
 
                             AggregateIterable<BsonDocument> photosIterator = photosCollection.aggregate(query);
                             ArrayList<BsonDocument> photos = photosIterator.into(new ArrayList<>());
@@ -122,6 +149,7 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                             BsonDocument bsonDocument = new BsonDocument("photos", new BsonArray(photos));
                             json = bsonDocument.toJson();
                         } catch (Exception e) {
+                            log.error("Error in /photos api", e);
                             return APIGatewayV2HTTPResponse.builder()
                                     .withStatusCode(500)
                                     .withBody("Error: " + e.getMessage())
@@ -145,6 +173,7 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                                 indexFile = reader.lines().collect(Collectors.joining(System.lineSeparator()));
                             }
                         } catch (IOException e) {
+                            log.error("Error reading index.html", e);
                             throw new RuntimeException(e);
                         }
                         return APIGatewayV2HTTPResponse.builder()
