@@ -90,6 +90,7 @@
         Typography,
         Card,
         CardContent,
+        Checkbox,
         Collapse,
         List,
         ListItem,
@@ -111,11 +112,29 @@
     function App() {
         const [captionQuery, setCaptionQuery] = useState("");
         const [photos, setPhotos] = useState([]);
+        const [colours, setColours] = useState([]);
+        const [selectedColours, setSelectedColours] = useState([]); //['red', 'blue'
+
+        const domain = document.location.host.indexOf('localhost') === 0 ? 'http://localhost:8001' : '';
+
+        useEffect(() => {
+            fetch(`${domain}/colours`)
+                .then(response => {
+                    if (response.status === 200) {
+                        return response.json();
+                    } else {
+                        throw new Error('Something went wrong', response);
+                    }
+                })
+                .then(data => {
+                    setColours(data);
+                })
+        }, []);
 
         //call the service /photos/?caption=123
-        const domain = document.location.host.indexOf('localhost') === 0 ? 'http://localhost:8001' : '';
         useEffect(() => {
-            fetch(`${domain}/photos/?caption=${captionQuery}`)
+            let coloursParam = selectedColours.length > 0 ? `&colours=${selectedColours.join(',')}` : '';
+            fetch(`${domain}/photos/?caption=${captionQuery}${coloursParam}`)
                 .then(response => {
                     if (response.status === 400) {
                         return {photos: []};
@@ -128,7 +147,7 @@
                 .then(data => {
                     setPhotos(data.photos);
                 })
-        }, [captionQuery]);
+        }, [captionQuery, selectedColours]);
 
         return (
             <div
@@ -150,6 +169,27 @@
                     </Grid>
                 </Grid>
 
+                {colours.map(colour => (
+                    //check boxes for a list of selected colours
+                    <FormControl key={colour}>
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={selectedColours.includes(colour)}
+                                    onChange={(e) => {
+                                        if (e.target.checked) {
+                                            setSelectedColours([...selectedColours, colour]);
+                                        } else {
+                                            setSelectedColours(selectedColours.filter(c => c !== colour));
+                                        }
+                                    }}
+                                    name={colour}
+                                />
+                            }
+                            label={colour}
+                        />
+                    </FormControl>
+                ))}
 
                         {photos.map(photo => (
                             <Card key={photo.caption}>

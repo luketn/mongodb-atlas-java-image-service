@@ -43,6 +43,12 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
         switch(method) {
             case "GET": {
                 switch (path) {
+                    case "/colours": {
+                        return APIGatewayV2HTTPResponse.builder()
+                                .withStatusCode(200)
+                                .withBody("[\"Brown\",\"Black\",\"White\",\"Grey\",\"Red\",\"Blue\",\"Yellow\",\"Green\"]")
+                                .build();
+                    }
                     case "/photos": {
                         String json;
                         try {
@@ -50,13 +56,16 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                             String caption = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("caption", null);
                             String hasPersonString = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("hasPerson", null);
                             Boolean hasPerson = hasPersonString != null ? Boolean.parseBoolean(hasPersonString) : null;
+                            List<String> colours = getStringListQueryParams(apiGatewayV2HTTPEvent, "colours");
+                            List<String> breeds = getStringListQueryParams(apiGatewayV2HTTPEvent, "breeds");
+                            List<String> sizes = getStringListQueryParams(apiGatewayV2HTTPEvent, "sizes");
 
                             //Get the MongoDB collection
                             MongoDatabase imageSearch = MONGO_CLIENT.getDatabase("ImageSearch");
                             MongoCollection<BsonDocument> photosCollection = imageSearch.getCollection("photo", BsonDocument.class);
 
                             //Perform Atlas Search query
-                            if ((caption == null || caption.isEmpty()) && hasPerson == null) {
+                            if ((caption == null || caption.isEmpty()) && hasPerson == null && colours == null && breeds == null && sizes == null) {
                                 return APIGatewayV2HTTPResponse.builder()
                                         .withStatusCode(400)
                                         .withBody("Must provide at least one query parameter")
@@ -65,6 +74,9 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                             List<Bson> query = AtlasSearchBuilder.builder()
                                     .withCaption(caption)
                                     .hasPerson(hasPerson)
+                                    .withColours(colours)
+                                    .withBreeds(breeds)
+                                    .withSizes(sizes)
                                     .build(
                                             Aggregates.limit(5),
                                             Aggregates.addFields(
@@ -146,5 +158,11 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                         .build();
                 }
         }
+    }
+
+    private static List<String> getStringListQueryParams(APIGatewayV2HTTPEvent apiGatewayV2HTTPEvent, String paramName) {
+        String paramString = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault(paramName, null);
+        List<String> paramValues = paramString != null ? List.of(paramString.split(",")) : null;
+        return paramValues;
     }
 }

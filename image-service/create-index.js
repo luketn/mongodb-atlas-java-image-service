@@ -1,4 +1,6 @@
 //create search index on photo collection
+db.getSiblingDB('ImageSearch').getCollection('photo').dropSearchIndex('default');
+
 db.getSiblingDB('ImageSearch').getCollection('photo').createSearchIndex('default',
     {
         "mappings": {
@@ -19,39 +21,30 @@ db.getSiblingDB('ImageSearch').getCollection('photo').createSearchIndex('default
                 "hasPerson": {
                     "type": "boolean"
                 },
-                "dogs": {
-                    "type": "embeddedDocuments",
-                    "dynamic": false,
-                    "fields": {
-                        "colour": {
-                            "type": "string",
-                            "multi": {
-                                "keywordAnalyzer": {
-                                    "type": "string",
-                                    "analyzer": "lucene.keyword"
-                                }
-                            }
-                        },
-                        "size": {
-                            "type": "string",
-                            "multi": {
-                                "keywordAnalyzer": {
-                                    "type": "string",
-                                    "analyzer": "lucene.keyword"
-                                }
-                            }
-                        },
-                        "breed": {
-                            "type": "string",
-                            "multi": {
-                                "keywordAnalyzer": {
-                                    "type": "string",
-                                    "analyzer": "lucene.keyword"
-                                }
-                            }
-                        }
+                "breeds": [
+                    {
+                        "type": "token"
+                    },
+                    {
+                        "type": "stringFacet"
                     }
-                }
+                ],
+                "colours": [
+                    {
+                        "type": "token"
+                    },
+                    {
+                        "type": "stringFacet"
+                    }
+                ],
+                "sizes": [
+                    {
+                        "type": "token"
+                    },
+                    {
+                        "type": "stringFacet"
+                    }
+                ]
             }
         }
     }
