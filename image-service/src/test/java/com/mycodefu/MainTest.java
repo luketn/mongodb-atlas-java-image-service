@@ -43,7 +43,7 @@ class MainTest {
         assertNotNull(apiGatewayV2HTTPResponse);
         assertEquals(200, apiGatewayV2HTTPResponse.getStatusCode());
         assertFalse(apiGatewayV2HTTPResponse.getIsBase64Encoded());
-        assertTrue(apiGatewayV2HTTPResponse.getBody().startsWith("{\"photos\": ["));
+        assertTrue(apiGatewayV2HTTPResponse.getBody().startsWith("{\"photos\":["));
     }
     @Test
     void handleRequest_colours() {
@@ -63,7 +63,7 @@ class MainTest {
         assertEquals(200, apiGatewayV2HTTPResponse.getStatusCode());
         assertFalse(apiGatewayV2HTTPResponse.getIsBase64Encoded());
         String body = apiGatewayV2HTTPResponse.getBody();
-        assertTrue(body.startsWith("{\"photos\": ["));
         System.out.println(body);
+        assertTrue(body.startsWith("{\"photos\":["));
     }
 }

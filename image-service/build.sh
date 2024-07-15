@@ -1,6 +1,6 @@
 set -e
 
-mvn clean package --activate-profiles linux-aarch64
+mvn clean package
 rm -rf ./temp-build
 mkdir temp-build
 cp target/image-service.jar ./temp-build/

@@ -2,6 +2,10 @@
 cat ../image-data/photo-results.json | jq .photos | tr -d '\n' | jq -c '.[]' > data.jsonl
 cat ../image-data/photo-results-info-temp.json | jq .photos | tr -d '\n' | jq -c '.[]' > data-info.jsonl
 
+java -cp target/image-service.jar com.mycodefu.DogInfoCleaner
+mv data-info.jsonl data-info-pre-cleaned.jsonl
+mv data-info-cleaned.jsonl data-info.jsonl
+
 # import jsonl to mongo, dropping existing collection
 mongoimport --uri "mongodb://localhost" --db ImageSearch --collection photos --drop --file data.jsonl
 mongoimport --uri "mongodb://localhost" --db ImageSearch --collection photoinfo --drop --file data-info.jsonl
@@ -14,6 +18,5 @@ else
   echo "Not uploading data to Atlas."
 fi
 
-java -cp target/image-service.jar com.mycodefu.DogInfoCleaner
 
 ./merge-collections.sh
