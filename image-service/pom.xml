@@ -30,6 +30,13 @@
             <artifactId>aws-lambda-java-events</artifactId>
             <version>3.11.5</version>
         </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.5.6</version>
+            <scope>test</scope>
+        </dependency>
+
 
         <!--JUnit5-->
         <dependency>

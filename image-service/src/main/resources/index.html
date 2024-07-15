@@ -1,34 +1,227 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>MongoDB Atlas Java Image Search</title>
+    <title>MongoDB Atlas Search Service</title>
+    <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@material-ui/core@latest/umd/material-ui.development.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/react-beautiful-dnd@13.1.1/dist/react-beautiful-dnd.min.js"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #1E1F22;
-            color: #BCBEC4;
+        .MuiSlider-root {
+            margin-top: 40px;
         }
-        h4 {
-            margin-bottom: 0;
-            margin-left: 5px
+
+        .risk-low {
+            background-color: #97e397;
         }
-        td {
-            vertical-align: top;
+
+        .risk-medium {
+            background-color: #eebe8f;
         }
-        img {
-            border: 1px solid darkmagenta;
-            min-width: 300px;
-            min-height: 200px;
+
+        .risk-high {
+            background-color: #ec9595;
+        }
+
+        .risk-critical {
+            background-color: #e37ae3;
+        }
+
+        .bar-buttons {
+            color: white;
+        }
+
+        .bar-divider {
+            background: white;
+        }
+
+        .slider-red .MuiSlider-track {
+            background-color: red;
+        }
+
+        .slider-amber .MuiSlider-track {
+            background-color: orange;
+        }
+
+        .slider-green .MuiSlider-track {
+            background-color: green;
+        }
+
+        @media print {
+            overflow: visible;
+
+            .bar-buttons {
+                display: none;
+            }
+
+            .MuiAppBar-root {
+                position: static;
+            }
+
+            .MuiToolbar-root {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .MuiToolbar-root .MuiCard-root {
+                margin-left: auto;
+            }
+
+            .printing-dont-break-inside {
+                page-break-inside: avoid;
+            }
+
+            .printing-page-break-before {
+                page-break-before: always;
+            }
         }
     </style>
 </head>
-
 <body>
-    <h4>MongoDB Atlas Java Image Search</h4>
-    <p>TODO: Add a search bar and button here</p>
-</body>
+<div id="root"></div>
 
+<script type="text/babel">
+    const { useState, useEffect } = React;
+    const {
+        Slider,
+        Typography,
+        Card,
+        CardContent,
+        Checkbox,
+        Collapse,
+        List,
+        ListItem,
+        ListItemText,
+        AppBar,
+        Toolbar,
+        Divider,
+        Radio,
+        RadioGroup,
+        FormControlLabel,
+        FormControl,
+        TextField,
+        Button,
+        Box,
+        Grid,
+    } = MaterialUI;
+    const { DragDropContext, Droppable, Draggable } = window.ReactBeautifulDnd;
+
+    function App() {
+        const [captionQuery, setCaptionQuery] = useState("");
+        const [photos, setPhotos] = useState([]);
+        const [colours, setColours] = useState([]);
+        const [selectedColours, setSelectedColours] = useState([]); //['red', 'blue'
+
+        const domain = document.location.host.indexOf('localhost') === 0 ? 'http://localhost:8001' : '';
+
+        useEffect(() => {
+            fetch(`${domain}/colours`)
+                .then(response => {
+                    if (response.status === 200) {
+                        return response.json();
+                    } else {
+                        throw new Error('Something went wrong', response);
+                    }
+                })
+                .then(data => {
+                    setColours(data);
+                })
+        }, []);
+
+        //call the service /photos/?caption=123
+        useEffect(() => {
+            let coloursParam = selectedColours.length > 0 ? `&colours=${selectedColours.join(',')}` : '';
+            fetch(`${domain}/photos/?caption=${captionQuery}${coloursParam}`)
+                .then(response => {
+                    if (response.status === 400) {
+                        return {photos: []};
+                    } else if (response.status === 200) {
+                        return response.json();
+                    } else {
+                        throw new Error('Something went wrong', response);
+                    }
+                })
+                .then(data => {
+                    setPhotos(data.photos);
+                })
+        }, [captionQuery, selectedColours]);
+
+        return (
+            <div
+                tabIndex="0"
+            >
+                <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                        <Typography variant="h5" component="h2">
+                            Welcome to MongoDB Atlas Search Service
+                        </Typography>
+                        <Typography variant="body2" component="p">
+                            This is a simple React application that demonstrates the use of MongoDB Atlas Search Service.
+                        </Typography>
+                        <TextField
+                            label="Caption"
+                            value={captionQuery}
+                            onChange={(e) => setCaptionQuery(e.target.value)}
+                        />
+                    </Grid>
+                </Grid>
+
+                {colours.map(colour => (
+                    //check boxes for a list of selected colours
+                    <FormControl key={colour}>
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={selectedColours.includes(colour)}
+                                    onChange={(e) => {
+                                        if (e.target.checked) {
+                                            setSelectedColours([...selectedColours, colour]);
+                                        } else {
+                                            setSelectedColours(selectedColours.filter(c => c !== colour));
+                                        }
+                                    }}
+                                    name={colour}
+                                />
+                            }
+                            label={colour}
+                        />
+                    </FormControl>
+                ))}
+
+                        {photos.map(photo => (
+                            <Card key={photo.caption}>
+                                <CardContent>
+                                    <Grid container spacing={2}>
+                                        <Grid item xs={2}>
+                                        <Box
+                                            component="img"
+                                            sx={{ maxWidth: 200 }}
+                                            alt={photo.caption}
+                                            src={photo.url}
+                                        />
+                                        </Grid>
+                                        <Grid item xs={9}>
+                                        <Typography variant="body1" component="h2">
+                                            {photo.caption}
+                                        </Typography>
+                                        </Grid>
+                                        <Grid item xs={1}>
+                                        <Typography variant="body2" component="p">
+                                            {photo.hasPerson ? "Has Person" : "No Person"}
+                                        </Typography>
+                                        </Grid>
+                                    </Grid>
+                                </CardContent>
+                            </Card>
+                        ))}
+            </div>
+        );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+</script>
+</body>
 </html>

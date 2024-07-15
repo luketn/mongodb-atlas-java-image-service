@@ -7,10 +7,11 @@ import org.bson.conversions.Bson;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
+
 import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.search.SearchOperator.*;
-import static com.mycodefu.atlas.AtlasSearchUtils.fuzzyText;
-import static com.mycodefu.atlas.AtlasSearchUtils.isEqual;
+import static com.mycodefu.atlas.AtlasSearchUtils.*;
 
 public class AtlasSearchBuilder {
     final List<SearchOperator> must = new ArrayList<>();
@@ -54,6 +55,27 @@ public class AtlasSearchBuilder {
     public AtlasSearchBuilder hasPerson(Boolean hasPerson) {
         if (hasPerson != null) {
             must.add(isEqual("hasPerson", hasPerson));
+        }
+        return this;
+    }
+
+    public AtlasSearchBuilder withColours(List<String> colours) {
+        if (colours != null && !colours.isEmpty()) {
+            must.add(in("colours", colours));
+        }
+        return this;
+    }
+
+    public AtlasSearchBuilder withBreeds(List<String> breeds) {
+        if (breeds != null && !breeds.isEmpty()) {
+            must.add(in("breeds", breeds));
+        }
+        return this;
+    }
+
+    public AtlasSearchBuilder withSizes(List<String> sizes) {
+        if (sizes != null && !sizes.isEmpty()) {
+            must.add(in("sizes", sizes));
         }
         return this;
     }

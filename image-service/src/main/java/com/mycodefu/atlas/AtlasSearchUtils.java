@@ -6,8 +6,11 @@ import org.bson.Document;
 import org.bson.conversions.Bson;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+
+import static com.mongodb.client.model.search.SearchOperator.compound;
 
 public class AtlasSearchUtils {
 
@@ -15,12 +18,22 @@ public class AtlasSearchUtils {
         return SearchOperator.of(new Document("text", new Document()
                 .append("path", path)
                 .append("query", text)
-                .append("fuzzy", new Document()
-                        .append("maxEdits", 2)
-                        .append("prefixLength", 1)
-                        .append("maxExpansions", 100)
-                )
+                .append("fuzzy", new Document())
         ));
+    }
+
+    public static SearchOperator embeddedDocumentQuery(String documentField, SearchOperator ...queries) {
+        SearchOperator operator;
+        if (queries.length > 1) {
+            operator = SearchOperator.of(compound().must(Arrays.asList(queries)));
+        } else {
+            operator = queries[0];
+        }
+        Document embeddedDocumentQuery = new Document("embeddedDocument",
+                new Document("path", documentField)
+                    .append("operator", operator)
+        );
+        return SearchOperator.of(embeddedDocumentQuery);
     }
 
     public static SearchOperator in(String path, List<?> value) {
@@ -60,21 +73,18 @@ public class AtlasSearchUtils {
         return new Document("range", rangeDocument);
     }
 
-    public static <T> SearchOperator mustClauseForCollection(String path, Collection<T> values) {
-        Bson clause;
+    public static <T> SearchOperator listEqual(String path, List<T> values) {
+        SearchOperator operator;
         if (values.size() == 1) {
-            switch (values.iterator().next()) {
-                case String s -> clause = isEqual(path, s);
-                case Number n -> clause = isEqual(path, n);
-                case Boolean b -> clause = isEqual(path, b);
+            switch (values.getFirst()) {
+                case String s -> operator = isEqual(path, s);
+                case Number n -> operator = isEqual(path, n);
+                case Boolean b -> operator = isEqual(path, b);
                 case Object o -> throw new IllegalArgumentException("Unsupported type: " + o.getClass());
             }
         } else {
-            clause = new Document("in", new Document()
-                    .append("path", path)
-                    .append("value", values)
-            );
+            operator = in(path, values);
         }
-        return SearchOperator.of(clause);
+        return operator;
     }
 }

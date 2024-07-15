@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
 import com.mongodb.client.*;
 import com.mongodb.client.model.Aggregates;
+import com.mongodb.client.model.Field;
 import com.mycodefu.atlas.AtlasSearchBuilder;
 import org.bson.*;
 import org.bson.conversions.Bson;
@@ -16,6 +17,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -35,13 +37,39 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
         //return cacheable options
         String method = apiGatewayV2HTTPEvent.getRequestContext().getHttp().getMethod();
         String path = apiGatewayV2HTTPEvent.getRequestContext().getHttp().getPath();
-        if (path.endsWith("/")) {
+        if (path.length() > 1 && path.endsWith("/")) {
             path = path.substring(0, path.length() - 1);
         }
 
         switch(method) {
             case "GET": {
                 switch (path) {
+                    case "/colours": {
+                        
+                        //distinct colours
+                        String[] distinctColours = new String[]{
+                                "Beige", "Black", "Blue",
+                                "Brown",
+                                "Cream",
+                                "Dark Brown", "Dark Grey",// convert to Brown: "Darker Brown",
+                                "Golden",// convert to Golden: "Gold",  "Golden Brown",
+                                "Green", "Grey",
+                                "Light Brown", "Light Grey",
+                                "Light Tan", "Orange", "Pink",
+                                "Purple", "Red", "Silver",
+                                "Tan", "White",
+                                "Yellow"
+                        };
+                        String json = Arrays.stream(distinctColours)
+                                .sorted()
+                                .map(colour -> "\"" + colour + "\"")
+                                .collect(Collectors.joining(", ", "[", "]"));
+                        
+                        return APIGatewayV2HTTPResponse.builder()
+                                .withStatusCode(200)
+                                .withBody(json)
+                                .build();
+                    }
                     case "/photos": {
                         String json;
                         try {
@@ -49,17 +77,32 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                             String caption = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("caption", null);
                             String hasPersonString = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("hasPerson", null);
                             Boolean hasPerson = hasPersonString != null ? Boolean.parseBoolean(hasPersonString) : null;
+                            List<String> colours = getStringListQueryParams(apiGatewayV2HTTPEvent, "colours");
+                            List<String> breeds = getStringListQueryParams(apiGatewayV2HTTPEvent, "breeds");
+                            List<String> sizes = getStringListQueryParams(apiGatewayV2HTTPEvent, "sizes");
 
                             //Get the MongoDB collection
                             MongoDatabase imageSearch = MONGO_CLIENT.getDatabase("ImageSearch");
                             MongoCollection<BsonDocument> photosCollection = imageSearch.getCollection("photo", BsonDocument.class);
 
                             //Perform Atlas Search query
+                            if ((caption == null || caption.isEmpty()) && hasPerson == null && colours == null && breeds == null && sizes == null) {
+                                return APIGatewayV2HTTPResponse.builder()
+                                        .withStatusCode(400)
+                                        .withBody("Must provide at least one query parameter")
+                                        .build();
+                            }
                             List<Bson> query = AtlasSearchBuilder.builder()
                                     .withCaption(caption)
                                     .hasPerson(hasPerson)
+                                    .withColours(colours)
+                                    .withBreeds(breeds)
+                                    .withSizes(sizes)
                                     .build(
                                             Aggregates.limit(5),
+                                            Aggregates.addFields(
+                                                    new Field<>("id", new Document("$toString", "$_id"))
+                                            ),
                                             Aggregates.project(
                                                     new Document()
                                                             .append("_id", 0)
@@ -136,5 +179,11 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                         .build();
                 }
         }
+    }
+
+    private static List<String> getStringListQueryParams(APIGatewayV2HTTPEvent apiGatewayV2HTTPEvent, String paramName) {
+        String paramString = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault(paramName, null);
+        List<String> paramValues = paramString != null ? List.of(paramString.split(",")) : null;
+        return paramValues;
     }
 }
