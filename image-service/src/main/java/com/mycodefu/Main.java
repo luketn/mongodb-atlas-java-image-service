@@ -17,6 +17,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -44,9 +45,29 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
             case "GET": {
                 switch (path) {
                     case "/colours": {
+                        
+                        //distinct colours
+                        String[] distinctColours = new String[]{
+                                "Beige", "Black", "Blue",
+                                "Brown",
+                                "Cream",
+                                "Dark Brown", "Dark Grey",// convert to Brown: "Darker Brown",
+                                "Golden",// convert to Golden: "Gold",  "Golden Brown",
+                                "Green", "Grey",
+                                "Light Brown", "Light Grey",
+                                "Light Tan", "Orange", "Pink",
+                                "Purple", "Red", "Silver",
+                                "Tan", "White",
+                                "Yellow"
+                        };
+                        String json = Arrays.stream(distinctColours)
+                                .sorted()
+                                .map(colour -> "\"" + colour + "\"")
+                                .collect(Collectors.joining(", ", "[", "]"));
+                        
                         return APIGatewayV2HTTPResponse.builder()
                                 .withStatusCode(200)
-                                .withBody("[\"Brown\",\"Black\",\"White\",\"Grey\",\"Red\",\"Blue\",\"Yellow\",\"Green\"]")
+                                .withBody(json)
                                 .build();
                     }
                     case "/photos": {
