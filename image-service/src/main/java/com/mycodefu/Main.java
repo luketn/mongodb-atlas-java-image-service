@@ -4,10 +4,14 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mongodb.client.*;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Field;
 import com.mycodefu.atlas.AtlasSearchBuilder;
+import com.mycodefu.data.Colours;
+import com.mycodefu.data.Photo;
+import com.mycodefu.data.PhotoResults;
 import org.bson.*;
 import org.bson.conversions.Bson;
 import org.slf4j.Logger;
@@ -19,10 +23,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static com.mycodefu.data.Serializer.objectMapper;
 
 public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResponse> {
     public static final String CONNECTION_STRING = System.getenv("CONNECTION_STRING") != null ? System.getenv("CONNECTION_STRING") : "mongodb://localhost:27017/directConnection=true";
@@ -55,26 +60,13 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
             case "GET": {
                 switch (path) {
                     case "/colours": {
-                        
-                        //distinct colours
-                        String[] distinctColours = new String[]{
-                                "Beige", "Black", "Blue",
-                                "Brown",
-                                "Cream",
-                                "Dark Brown", "Dark Grey",// convert to Brown: "Darker Brown",
-                                "Golden",// convert to Golden: "Gold",  "Golden Brown",
-                                "Green", "Grey",
-                                "Light Brown", "Light Grey",
-                                "Light Tan", "Orange", "Pink",
-                                "Purple", "Red", "Silver",
-                                "Tan", "White",
-                                "Yellow"
-                        };
-                        String json = Arrays.stream(distinctColours)
-                                .sorted()
-                                .map(colour -> "\"" + colour + "\"")
-                                .collect(Collectors.joining(", ", "[", "]"));
-                        
+                        String json;
+                        try {
+                            json = objectMapper.writeValueAsString(Colours.allowed);
+                        } catch (JsonProcessingException e) {
+                            log.error("Error serialising colours", e);
+                            throw new RuntimeException(e);
+                        }
                         return APIGatewayV2HTTPResponse.builder()
                                 .withStatusCode(200)
                                 .withBody(json)
@@ -85,6 +77,7 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                         try {
                             //get the caption query string parameter
                             String caption = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("caption", null);
+                            String summary = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("summary", null);
                             String hasPersonString = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("hasPerson", null);
                             Boolean hasPerson = hasPersonString != null ? Boolean.parseBoolean(hasPersonString) : null;
                             List<String> colours = getStringListQueryParams(apiGatewayV2HTTPEvent, "colours");
@@ -93,10 +86,17 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
 
                             //Get the MongoDB collection
                             MongoDatabase imageSearch = MONGO_CLIENT.getDatabase("ImageSearch");
-                            MongoCollection<BsonDocument> photosCollection = imageSearch.getCollection("photo", BsonDocument.class);
+                            MongoCollection<Photo> photosCollection = imageSearch.getCollection("photo", Photo.class);
 
                             //Perform Atlas Search query
-                            if ((caption == null || caption.isEmpty()) && hasPerson == null && colours == null && breeds == null && sizes == null) {
+                            if (
+                                 (caption == null || caption.isEmpty())
+                                 && (summary == null || summary.isEmpty())
+                                 && hasPerson == null
+                                 && colours == null
+                                 && breeds == null
+                                 && sizes == null
+                            ) {
                                 return APIGatewayV2HTTPResponse.builder()
                                         .withStatusCode(400)
                                         .withBody("Must provide at least one query parameter")
@@ -104,6 +104,7 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                             }
                             List<Bson> query = AtlasSearchBuilder.builder()
                                     .withCaption(caption)
+                                    .withSummary(summary)
                                     .hasPerson(hasPerson)
                                     .withColours(colours)
                                     .withBreeds(breeds)
@@ -136,12 +137,13 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                                 );
                             }
 
-                            AggregateIterable<BsonDocument> photosIterator = photosCollection.aggregate(query);
-                            ArrayList<BsonDocument> photos = photosIterator.into(new ArrayList<>());
+                            AggregateIterable<Photo> photosIterator = photosCollection.aggregate(query);
+                            ArrayList<Photo> photos = photosIterator.into(new ArrayList<>());
 
                             //serialise to JSON
-                            BsonDocument bsonDocument = new BsonDocument("photos", new BsonArray(photos));
-                            json = bsonDocument.toJson();
+                            PhotoResults photoResults = new PhotoResults(photos);
+                            json = objectMapper.writeValueAsString(photoResults);
+
                         } catch (Exception e) {
                             log.error("Error in /photos api", e);
                             return APIGatewayV2HTTPResponse.builder()

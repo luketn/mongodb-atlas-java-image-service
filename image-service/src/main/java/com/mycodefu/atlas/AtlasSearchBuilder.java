@@ -7,7 +7,6 @@ import org.bson.conversions.Bson;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.search.SearchOperator.*;
@@ -48,6 +47,13 @@ public class AtlasSearchBuilder {
     public AtlasSearchBuilder withCaption(String caption) {
         if (caption != null && !caption.isEmpty()) {
             must.add(fuzzyText("caption", caption));
+        }
+        return this;
+    }
+
+    public AtlasSearchBuilder withSummary(String summary) {
+        if (summary != null && !summary.isEmpty()) {
+            must.add(phrase("summary", summary));
         }
         return this;
     }

@@ -3,6 +3,7 @@ package com.mycodefu;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mycodefu.data.Colours;
 import com.mycodefu.data.DogSize;
 
 import java.io.IOException;
@@ -11,18 +12,10 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 
+import static com.mycodefu.data.Serializer.objectMapper;
 import static java.util.Map.entry;
 
 public class DogInfoCleaner {
-    static ObjectMapper objectMapper = new ObjectMapper();
-
-    static List<String> allowedColours = Arrays.asList(
-            "Black",
-            "Brown",
-            "White",
-            "Grey",
-            "Golden"
-    );
     static Map<String, String> colourMap = Map.ofEntries(
             entry("Tan", "Brown"),
             entry("Beige", "Brown"),
@@ -55,13 +48,13 @@ public class DogInfoCleaner {
     //record for {"time_taken_seconds":7,"url":"https://image-search.mycodefu.com/photos/Images/n02091134-whippet/n02091134_19308.jpg","info":{"detailedCaption":"Two white whippets standing in a grassy area with trees in the background.","hasPerson":false,"dogs":[{"colour":["White"],"size":"Medium","breed":"Whippet"},{"colour":["White"],"size":"Small","breed":"Whippet"}]},"filename":"photos/Images/n02091134-whippet/n02091134_19308.jpg"}
     @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    record Dog(String breed, DogSize size, List<String> colour) { }
+    private record Dog(String breed, DogSize size, List<String> colour) { }
     @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    record Info(String detailedCaption, boolean hasPerson, List<Dog> dogs) { }
+    private record Info(String detailedCaption, boolean hasPerson, List<Dog> dogs) { }
     @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    record Photo(String url, Info info, String filename, int time_taken_seconds, String error) { }
+    private record Photo(String url, Info info, String filename, int time_taken_seconds, String error) { }
 
     public static void main(String[] args) throws IOException {
         var jsonLines = Files.readAllLines(Paths.get("data-info.jsonl"));
@@ -90,7 +83,7 @@ public class DogInfoCleaner {
                                     coloursMapped.add(colour);
                                     colour = colourMap.get(colour);
                                 }
-                                if (!allowedColours.contains(colour)) {
+                                if (!Colours.allowed.contains(colour)) {
                                     coloursRemoved.add(colour);
 
                                 } else {

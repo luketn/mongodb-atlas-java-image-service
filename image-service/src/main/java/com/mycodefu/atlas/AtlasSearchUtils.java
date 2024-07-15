@@ -22,6 +22,13 @@ public class AtlasSearchUtils {
         ));
     }
 
+    public static SearchOperator phrase(String path, String phrase) {
+        return SearchOperator.of(new Document("phrase", new Document()
+                .append("path", path)
+                .append("query", phrase)
+        ));
+    }
+
     public static SearchOperator embeddedDocumentQuery(String documentField, SearchOperator ...queries) {
         SearchOperator operator;
         if (queries.length > 1) {
