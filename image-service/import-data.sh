@@ -14,4 +14,6 @@ else
   echo "Not uploading data to Atlas."
 fi
 
+java -cp target/image-service.jar com.mycodefu.DogInfoCleaner
+
 ./merge-collections.sh

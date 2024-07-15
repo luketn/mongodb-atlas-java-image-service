@@ -38,12 +38,6 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
     }
     public static final MongoClient MONGO_CLIENT = connect();
 
-
-
-//    public enum DogSize {Small, Medium, Large}
-//    public record Dog(List<String> colour, String breed, DogSize size) {}
-//    public record Photo(String caption, String url, Boolean hasPerson, List<Dog> dogs) {}
-
     @Override
     public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent apiGatewayV2HTTPEvent, Context context) {
         if (log.isTraceEnabled()) {
