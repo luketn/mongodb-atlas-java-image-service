@@ -9,6 +9,7 @@ import com.mongodb.client.*;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Field;
 import com.mycodefu.atlas.AtlasSearchBuilder;
+import com.mycodefu.atlas.MongoConnection;
 import com.mycodefu.data.Colours;
 import com.mycodefu.data.Photo;
 import com.mycodefu.data.PhotoResults;
@@ -27,21 +28,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static com.mycodefu.atlas.MongoConnection.connection;
 import static com.mycodefu.data.Serializer.objectMapper;
 
 public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResponse> {
-    public static final String CONNECTION_STRING = System.getenv("CONNECTION_STRING") != null ? System.getenv("CONNECTION_STRING") : "mongodb://localhost:27017/directConnection=true";
     private static final Logger log = LoggerFactory.getLogger(Main.class);
-
-    private static MongoClient connect() {
-        long start = System.currentTimeMillis();
-        MongoClient mongoClient = MongoClients.create(CONNECTION_STRING);
-        long end = System.currentTimeMillis();
-
-        log.info("Connected to MongoDB at {} in {}ms", CONNECTION_STRING.replaceAll("://.*@", "://<redacted>@"), end - start);
-        return mongoClient;
-    }
-    public static final MongoClient MONGO_CLIENT = connect();
 
     @Override
     public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent apiGatewayV2HTTPEvent, Context context) {
@@ -85,7 +76,7 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                             List<String> sizes = getStringListQueryParams(apiGatewayV2HTTPEvent, "sizes");
 
                             //Get the MongoDB collection
-                            MongoDatabase imageSearch = MONGO_CLIENT.getDatabase("ImageSearch");
+                            MongoDatabase imageSearch = connection().getDatabase("ImageSearch");
                             MongoCollection<Photo> photosCollection = imageSearch.getCollection("photo", Photo.class);
 
                             //Perform Atlas Search query
@@ -137,7 +128,7 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                                 );
                             }
 
-                            AggregateIterable<Photo> photosIterator = photosCollection.aggregate(query);
+                                AggregateIterable<Photo> photosIterator = photosCollection.aggregate(query);
                             ArrayList<Photo> photos = photosIterator.into(new ArrayList<>());
 
                             //serialise to JSON

@@ -1,6 +1,6 @@
 # convert output of machine learning model to JSON Lines (jsonl)
 cat ../image-data/photo-results.json | jq .photos | tr -d '\n' | jq -c '.[]' > data.jsonl
-cat ../image-data/photo-results-info-temp.json | jq .photos | tr -d '\n' | jq -c '.[]' > data-info.jsonl
+cat ../image-data/photo-results-info.json | jq .photos | tr -d '\n' | jq -c '.[]' > data-info.jsonl
 
 java -cp target/image-service.jar com.mycodefu.DogInfoCleaner
 mv data-info.jsonl data-info-pre-cleaned.jsonl

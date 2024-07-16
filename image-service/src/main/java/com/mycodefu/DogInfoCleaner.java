@@ -2,7 +2,6 @@ package com.mycodefu;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mycodefu.data.Colours;
 import com.mycodefu.data.DogSize;
 
@@ -17,6 +16,12 @@ import static java.util.Map.entry;
 
 public class DogInfoCleaner {
     static Map<String, String> colourMap = Map.ofEntries(
+            entry("Black And White", "Black"),
+            entry("Dark Brown", "Black"),
+            entry("Darker Brown", "Black"),
+            entry("Dark", "Black"),
+            entry("Dark Grey", "Black"),
+            entry("Dark Gray", "Black"),
             entry("Tan", "Brown"),
             entry("Beige", "Brown"),
             entry("Blonde", "Brown"),
@@ -24,24 +29,26 @@ public class DogInfoCleaner {
             entry("Brownish", "Brown"),
             entry("Brownish-Brown", "Brown"),
             entry("Brownish-Red", "Brown"),
-            entry("Dark", "Brown"),
             entry("Reddish-Brown", "Brown"),
+            entry("Brownish-Orange", "Brown"),
+            entry("Brown And White", "Brown"),
             entry("Yellowish-Brown", "Brown"),
             entry("Golden Brown", "Brown"),
-            entry("Dark Brown", "Brown"),
-            entry("Darker Brown", "Brown"),
+            entry("Golden-Brown", "Brown"),
             entry("Light Brown", "Brown"),
             entry("Light Tan", "Brown"),
             entry("Orange", "Brown"),
             entry("Red", "Brown"),
             entry("Yellow", "Brown"),
+            entry("Chestnut", "Brown"),
             entry("Cream", "White"),
-            entry("Dark Grey", "Grey"),
+            entry("Bluish-Grey", "Grey"),
             entry("Light Grey", "Grey"),
             entry("Light Gray", "Grey"),
             entry("Silver", "Grey"),
             entry("Gray", "Grey"),
-            entry("Gold", "Golden")
+            entry("Gold", "Golden"),
+            entry("Light Golden", "Golden")
     );
 
 

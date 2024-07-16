@@ -2,13 +2,49 @@ package com.mycodefu;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
+import com.mycodefu.atlas.MongoConnection;
+import com.mycodefu.data.Dog;
+import com.mycodefu.data.DogSize;
+import com.mycodefu.data.Photo;
+import org.bson.BsonDocument;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.testcontainers.containers.AtlasMongoDBTest;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class MainTest {
+class MainTest extends AtlasMongoDBTest {
+
+    @BeforeAll
+    static void setup() throws IOException {
+        MongoConnection.setConnectionString(connectionString());
+        //read index from file path "create-index.json"
+        String indexResource = Files.readString(Paths.get("create-index.json"));
+        MongoConnection.createAtlasIndex(
+                "ImageSearch",
+                "photo",
+                Photo.class,
+                "default",
+                BsonDocument.parse(indexResource),
+                List.of(
+                    new Photo("A pair of whippets in red bandannas.",
+                            "https://image-search.mycodefu.com/photos/Images/n02091134-whippet/n02091134_19308.jpg",
+                            false,
+                            List.of(new Dog(List.of("White"), "Whippet", DogSize.Medium)),
+                            List.of("White"),
+                            List.of(),
+                            List.of()
+                    )
+                )
+        );
+    }
+
     @Test
     void handleRequest_GET() {
         APIGatewayV2HTTPResponse apiGatewayV2HTTPResponse = new Main().handleRequest(APIGatewayV2HTTPEvent.builder()
@@ -55,7 +91,7 @@ class MainTest {
                                 .build())
                         .build())
                 .withBody("test")
-                .withQueryStringParameters(Map.of("colours", "Brown,Black"))
+                .withQueryStringParameters(Map.of("colours", "White"))
                 .withIsBase64Encoded(false)
                 .build(), null);
 
