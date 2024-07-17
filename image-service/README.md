@@ -1,5 +1,5 @@
-# OpenCV and Java on AWS Lambda
-This is an example of using OpenCV with Java on AWS Lambda.
+# MongoDB Atlas Image Search Service
+This is an example of building an image search service with Java and MongoDB Atlas on AWS Lambda.
 
 ## Getting Setup
 
@@ -23,6 +23,16 @@ mvn test
 mvn package
 ```
 
+### Start a local MongoDB Atlas instance using Docker Compose
+```shell
+docker-compose up -d
+```
+
+### Set up the test dataset used in the application in a local MongoDB Atlas instance
+```shell
+./import-data.sh
+```
+
 ### Run the application locally
 Run the static void main web server:
 ```
@@ -36,30 +46,39 @@ Then navigate to http://localhost:8001/ in your browser.
 ```
 (you might need to adjust the profile used - I use the 'personal' profile)
 
+\* Note: The application is deployed to AWS Lambda as a function URL. 
+Once deployed the URL will be printed to the shell and you can launch the 
+deployed app from that.
+
 ## Why?
-#### Why OpenCV?
-OpenCV is a powerful computer vision library that is widely used
-in industry and academia. It is a great tool for image processing
-and computer vision tasks, and it is well supported on many
-platforms, including mobile and small devices through to large 
-servers.
 
-#### Why Java and OpenCV?
-Java is the native language for the OpenCV Android SDK, and it's a
-popular language for many other purposes.
-It is also a language that is well supported on AWS Lambda, and
-compiles natively using just in time compilation, tuning its
-performance to the specific hardware it is running on and to 
-the specific task it is performing.
+#### Why MongoDB Atlas?
 
-#### Why AWS Lambda?
+
+#### Why Java and MongoDB Atlas?
+MongoDB and Java are a great combination for building scalable
+and reliable applications. MongoDB Atlas is a fully managed
+database service that is easy to use and scales with your needs.
+
+Java is a great language for building server-side applications,
+because of its strong typing, performance, and the wide range
+of libraries and frameworks available.
+
+MongoDB's Java driver is well supported and easy to use, and
+the serialization to and from Java objects is very easy to use.
+
+I really like Java records, and use them in this application
+to represent the data objects.
+
+
+#### Why run Java in an AWS Lambda?
 Just for fun :). 
 
 I was actually very pleasantly surprised by the performance level
 on AWS Lambda, and the ease of deployment and scaling.
 
 However in practice I would suggest if you were to seriously deploy
-a server-side computer vision application, you would probably want 
+a server-side image search engine in Java, you would probably want 
 to use a containerised platform.
 
 This application could easily adapt to that, and actually has a little
@@ -79,12 +98,6 @@ into memory. This can be quite long, and is not suitable for all
 applications. You'll notice that when you first load the web page.
 
 ## Background
-#### Why use JNI not the new Foreign Function & Memory API?
-I looked at that at first, but read that it may not be ready for C++
-usage yet. 
-All of the resources I found indicated to use JNI, so I went with that.
-In the future it could be a very interesting thing to try though,
-and might improve performance for interop with Java.
 
 #### Building Java Docker lambdas
 https://docs.aws.amazon.com/lambda/latest/dg/java-image.html
@@ -96,17 +109,3 @@ https://gallery.ecr.aws/lambda/java
 #### Using SnapStart
 A future enhancement could be to try using Java SnapStart to reduce cold start times. 
 https://aws.amazon.com/blogs/compute/re-platforming-java-applications-using-the-updated-aws-serverless-java-container/
-
-#### Building OpenCV with Java JNI bindings
-You can build OpenCV with Java bindings by following the instructions here:
-https://delabassee.com/OpenCVJava/
-(if you don't want to use something like this prebundled Maven dep)
-
-I found the precompiled OpenPNP library to be awesome, and up to date with the latest OpenCV version.
-It worked out of the box on Mac, Windows and Linux.
-
-#### Interesting ways to run existing java frameworks in lambda
-If you have an existing Java application that you want to run on AWS Lambda, you can use the AWS Serverless Java Container:
-https://github.com/aws/serverless-java-container/tree/main
-
-I'd be a little cautious with this though, as such applications may have very long cold start times.

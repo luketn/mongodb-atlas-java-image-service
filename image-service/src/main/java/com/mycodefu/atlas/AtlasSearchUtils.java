@@ -18,7 +18,9 @@ public class AtlasSearchUtils {
         return SearchOperator.of(new Document("text", new Document()
                 .append("path", path)
                 .append("query", text)
-                .append("fuzzy", new Document())
+                .append("fuzzy", new Document(
+                        "maxEdits", 1
+                ))
         ));
     }
 

@@ -53,7 +53,7 @@ public class AtlasSearchBuilder {
 
     public AtlasSearchBuilder withSummary(String summary) {
         if (summary != null && !summary.isEmpty()) {
-            must.add(phrase("summary", summary));
+            must.add(fuzzyText("summary", summary));
         }
         return this;
     }
