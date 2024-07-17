@@ -22,5 +22,6 @@ jobs:
           distribution: 'corretto'
           java-version: '21'
           cache: 'maven'
+          cache-dependency-path: 'image-service/pom.xml'
       - name: Run Tests
         run: mvn test
