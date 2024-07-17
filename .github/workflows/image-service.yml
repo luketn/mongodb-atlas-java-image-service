@@ -1,14 +1,18 @@
-name: Compile and Test
+name: image-service-ci
 on:
   workflow_dispatch:
   push:
     branches:
       - 'main'
-    paths-ignore:
-      - 'README.md'
+    paths:
+      - 'image-service/src/**'
+      - 'image-service/pom.xml'
 
 jobs:
-  compile:
+  ci:
+    defaults:
+      run:
+        working-directory: image-service
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -17,5 +21,5 @@ jobs:
           distribution: 'corretto'
           java-version: '21'
           cache: 'maven'
-      - name: Maven build, test and package
-        run: mvn package
+      - name: Run Tests
+        run: mvn test
