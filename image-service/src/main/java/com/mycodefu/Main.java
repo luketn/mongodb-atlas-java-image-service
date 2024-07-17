@@ -4,12 +4,10 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mongodb.client.*;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Field;
 import com.mycodefu.atlas.AtlasSearchBuilder;
-import com.mycodefu.atlas.MongoConnection;
 import com.mycodefu.data.Colours;
 import com.mycodefu.data.Photo;
 import com.mycodefu.data.PhotoResults;
@@ -29,7 +27,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.mycodefu.atlas.MongoConnection.connection;
-import static com.mycodefu.data.Serializer.objectMapper;
+import static com.mycodefu.util.Serializer.toJson;
 
 public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResponse> {
     private static final Logger log = LoggerFactory.getLogger(Main.class);
@@ -37,7 +35,7 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
     @Override
     public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent apiGatewayV2HTTPEvent, Context context) {
         if (log.isTraceEnabled()) {
-            log.trace("Received request:\n{}", apiGatewayV2HTTPEvent);
+            log.trace("Received request:\n{}", toJson(apiGatewayV2HTTPEvent));
         }
 
         //return cacheable options
@@ -52,12 +50,7 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                 switch (path) {
                     case "/colours": {
                         String json;
-                        try {
-                            json = objectMapper.writeValueAsString(Colours.allowed);
-                        } catch (JsonProcessingException e) {
-                            log.error("Error serialising colours", e);
-                            throw new RuntimeException(e);
-                        }
+                        json = toJson(Colours.allowed);
                         return APIGatewayV2HTTPResponse.builder()
                                 .withStatusCode(200)
                                 .withBody(json)
@@ -133,7 +126,7 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
 
                             //serialise to JSON
                             PhotoResults photoResults = new PhotoResults(photos);
-                            json = objectMapper.writeValueAsString(photoResults);
+                            json = toJson(photoResults);
 
                         } catch (Exception e) {
                             log.error("Error in /photos api", e);
