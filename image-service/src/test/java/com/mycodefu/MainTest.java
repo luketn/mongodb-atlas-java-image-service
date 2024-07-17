@@ -96,7 +96,6 @@ class MainTest extends AtlasMongoDBTest {
         assertEquals(200, apiGatewayV2HTTPResponse.getStatusCode());
         assertFalse(apiGatewayV2HTTPResponse.getIsBase64Encoded());
         String body = apiGatewayV2HTTPResponse.getBody();
-        System.out.println(body);
         PhotoResults result = objectMapper.readValue(body, PhotoResults.class);
         assertEquals(1, result.photos().size());
         assertEquals("A standard schnauzer in the snow", result.photos().get(0).summary());
