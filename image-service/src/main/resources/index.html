@@ -162,6 +162,13 @@
                 })
         }, [summaryQuery, selectedColours, mode]);
 
+        function colourCount(colour) {
+            if (facets && facets.facet.colours.buckets) {
+                return facets.facet.colours.buckets.find(bucket => bucket._id === colour)?.count || 0;
+            }
+            return 0;
+        }
+
         return (
             <div
                 tabIndex="0"
@@ -212,7 +219,7 @@
                                                 name={colour}
                                             />
                                         }
-                                        label={colour}
+                                        label={`${colour} (${colourCount(colour)})`}
                                     />
                                 </FormControl>
                             ))}
