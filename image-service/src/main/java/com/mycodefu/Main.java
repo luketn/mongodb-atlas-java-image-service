@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
+import com.mongodb.MongoCommandException;
 import com.mongodb.client.*;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Field;
@@ -11,6 +12,7 @@ import com.mycodefu.atlas.AtlasSearchBuilder;
 import com.mycodefu.data.Colours;
 import com.mycodefu.data.Photo;
 import com.mycodefu.data.PhotoResults;
+import com.mycodefu.data.TextMode;
 import org.bson.*;
 import org.bson.conversions.Bson;
 import org.slf4j.Logger;
@@ -62,6 +64,8 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                             //get the caption query string parameter
                             String caption = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("caption", null);
                             String summary = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("summary", null);
+                            String modeString = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("mode", null);
+                            TextMode mode = modeString != null ? TextMode.valueOf(modeString) : TextMode.Fuzzy;
                             String hasPersonString = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("hasPerson", null);
                             Boolean hasPerson = hasPersonString != null ? Boolean.parseBoolean(hasPersonString) : null;
                             List<String> colours = getStringListQueryParams(apiGatewayV2HTTPEvent, "colours");
@@ -82,25 +86,22 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                                  && breeds == null
                                  && sizes == null
                             ) {
-                                query = List.of(
-                                        limit_5,
-                                        id_to_string,
-                                        photos_projection
-                                );
-                            } else {
-                                query = AtlasSearchBuilder.builder()
-                                        .withCaption(caption)
-                                        .withSummary(summary)
-                                        .hasPerson(hasPerson)
-                                        .withColours(colours)
-                                        .withBreeds(breeds)
-                                        .withSizes(sizes)
-                                        .build(
-                                                limit_5,
-                                                id_to_string,
-                                                photos_projection
-                                        );
+                                caption = "*";
+                                mode = TextMode.WildCard;
                             }
+
+                            query = AtlasSearchBuilder.builder()
+                                    .withCaption(caption, mode)
+                                    .withSummary(summary, mode)
+                                    .hasPerson(hasPerson)
+                                    .withColours(colours)
+                                    .withBreeds(breeds)
+                                    .withSizes(sizes)
+                                    .build(
+                                            limit_5,
+                                            id_to_string,
+                                            photos_projection
+                                    );
 
                             //Log the query
                             if (log.isTraceEnabled()) {
@@ -125,6 +126,12 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                             PhotoResults photoResults = new PhotoResults(photos);
                             json = toJson(photoResults);
 
+                        } catch (MongoCommandException e) {
+                            log.error("Error in /photos api", e);
+                            return APIGatewayV2HTTPResponse.builder()
+                                    .withStatusCode(500)
+                                    .withBody("Error: " + e.getErrorMessage())
+                                    .build();
                         } catch (Exception e) {
                             log.error("Error in /photos api", e);
                             return APIGatewayV2HTTPResponse.builder()

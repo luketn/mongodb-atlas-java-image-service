@@ -3,6 +3,7 @@ package com.mycodefu.atlas;
 import com.mongodb.client.model.search.CompoundSearchOperator;
 import com.mongodb.client.model.search.SearchOperator;
 import com.mongodb.client.model.search.SearchOptions;
+import com.mycodefu.data.TextMode;
 import org.bson.conversions.Bson;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,16 +45,28 @@ public class AtlasSearchBuilder {
         return result;
     }
 
-    public AtlasSearchBuilder withCaption(String caption) {
+    public AtlasSearchBuilder withCaption(String caption, TextMode mode) {
         if (caption != null && !caption.isEmpty()) {
-            must.add(fuzzyText("caption", caption));
+            SearchOperator clause = switch(mode) {
+                case Fuzzy -> fuzzyText("caption", caption);
+                case QueryString -> queryString("caption", caption);
+                case WildCard -> wildcard("caption", caption);
+                case Phrase -> phrase("caption", caption);
+            };
+            must.add(clause);
         }
         return this;
     }
 
-    public AtlasSearchBuilder withSummary(String summary) {
+    public AtlasSearchBuilder withSummary(String summary, TextMode mode) {
         if (summary != null && !summary.isEmpty()) {
-            must.add(fuzzyText("summary", summary));
+            SearchOperator clause = switch(mode) {
+                case Fuzzy -> fuzzyText("summary", summary);
+                case QueryString -> queryString("summary", summary);
+                case WildCard -> wildcard("summary", summary);
+                case Phrase -> phrase("summary", summary);
+            };
+            must.add(clause);
         }
         return this;
     }
