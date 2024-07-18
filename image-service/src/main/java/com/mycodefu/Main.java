@@ -77,7 +77,6 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                             MongoCollection<Photo> photosCollection = imageSearch.getCollection("photo", Photo.class);
 
                             //Perform Atlas Search query
-                            List<Bson> query;
                             if (
                                  (caption == null || caption.isEmpty())
                                  && (summary == null || summary.isEmpty())
@@ -90,20 +89,19 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                                 mode = TextMode.WildCard;
                             }
 
-                            query = AtlasSearchBuilder.builder()
+                            AtlasSearchBuilder atlasSearchBuilder = AtlasSearchBuilder.builder()
                                     .withCaption(caption, mode)
                                     .withSummary(summary, mode)
                                     .hasPerson(hasPerson)
                                     .withColours(colours)
                                     .withBreeds(breeds)
-                                    .withSizes(sizes)
-                                    .build(
+                                    .withSizes(sizes);
+                            List<Bson> query = atlasSearchBuilder.build(
                                             limit_5,
                                             id_to_string,
                                             photos_projection
                                     );
 
-                            //Log the query
                             if (log.isTraceEnabled()) {
                                 var aggregateClauses = query
                                         .stream()
@@ -122,8 +120,27 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                             AggregateIterable<Photo> photosIterator = photosCollection.aggregate(query);
                             ArrayList<Photo> photos = photosIterator.into(new ArrayList<>());
 
-                            //serialise to JSON
-                            PhotoResults photoResults = new PhotoResults(photos);
+                            List<Bson> facetQuery = atlasSearchBuilder.buildForFacetCounts();
+                            if (log.isTraceEnabled()) {
+                                var aggregateClauses = facetQuery
+                                        .stream()
+                                        .map(bson -> bson.toBsonDocument().toJson())
+                                        .collect(Collectors.joining(",\n    "))
+                                        ;
+                                log.trace("""
+                                        Atlas Search query:
+                                          db.photo.aggregate([
+                                            %s
+                                          ])
+                                        """.formatted(aggregateClauses)
+                                );
+                            }
+
+                            MongoCollection<Document> photosCollectionForFaceting = imageSearch.getCollection("photo", Document.class);
+                            AggregateIterable<Document> facetIterator = photosCollectionForFaceting.aggregate(facetQuery);
+                            Document facetCounts = facetIterator.first();
+
+                            PhotoResults photoResults = new PhotoResults(photos, facetCounts);
                             json = toJson(photoResults);
 
                         } catch (MongoCommandException e) {

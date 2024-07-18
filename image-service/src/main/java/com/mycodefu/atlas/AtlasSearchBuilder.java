@@ -10,7 +10,10 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.mongodb.client.model.Aggregates.*;
+import static com.mongodb.client.model.search.SearchCollector.facet;
+import static com.mongodb.client.model.search.SearchFacet.stringFacet;
 import static com.mongodb.client.model.search.SearchOperator.*;
+import static com.mongodb.client.model.search.SearchPath.fieldPath;
 import static com.mycodefu.atlas.AtlasSearchUtils.*;
 
 public class AtlasSearchBuilder {
@@ -27,6 +30,22 @@ public class AtlasSearchBuilder {
                 of(buildCompoundQuery()),
                 SearchOptions.searchOptions().index("default")
         );
+
+        List<Bson> clauses = new ArrayList<>();
+        clauses.add(searchClause);
+        clauses.addAll(Arrays.asList(additionalClauses));
+        return clauses;
+    }
+
+    public List<Bson> buildForFacetCounts(Bson... additionalClauses) {
+        Bson searchClause = searchMeta(facet(
+                of(buildCompoundQuery()),
+                List.of(
+                        stringFacet("colours", fieldPath("colours")).numBuckets(1000),
+                        stringFacet("breeds", fieldPath("breeds")).numBuckets(1000),
+                        stringFacet("sizes", fieldPath("sizes")).numBuckets(1000)
+                )
+        ), SearchOptions.searchOptions().index("default"));
 
         List<Bson> clauses = new ArrayList<>();
         clauses.add(searchClause);
