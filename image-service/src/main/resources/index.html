@@ -140,7 +140,7 @@
         //call the service /photos/?caption=123
         useEffect(() => {
             let coloursParam = selectedColours.length > 0 ? `&colours=${selectedColours.join(',')}` : '';
-            fetch(`${domain}/photos/?mode=${mode}&summary=${summaryQuery}${coloursParam}`)
+            fetch(encodeURI(`${domain}/photos/?mode=${mode}&summary=${summaryQuery}${coloursParam}`))
                 .then(response => {
                     if (response.status === 400) {
                         setPhotoSearchError(null);
@@ -193,9 +193,9 @@
                     <Grid item xs={2}>
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                             <Typography color="textSecondary">Colour filter:</Typography>
-                            {colours.map(colour => (
+                            {colours.map((colour, index) => (
                                 //check boxes for a list of selected colours
-                                <FormControl key={colour}>
+                                <FormControl key={`colour.${colour}`}>
                                     <FormControlLabel
                                         control={
                                             <Checkbox
@@ -217,8 +217,8 @@
                         </Box>
                     </Grid>
                     <Grid item xs={10}>
-                        {photos.map(photo => (
-                            <Box key={photo.url} sx={{display: 'flex', padding: '5px'}}>
+                        {photos.map((photo, index) => (
+                            <Box key={`photo.${index}`} sx={{display: 'flex', padding: '5px'}}>
                                     <Box
                                         component="img"
                                         sx={{ maxWidth: 200, marginRight: '1rem' }}
@@ -228,7 +228,7 @@
                                     <Typography variant="body2" color="textPrimary">
                                         {photo.summary} {photo.hasPerson ? " (Has Person)" : " (No Person)"}
                                         {photo.dogs.map((dog, index) => (
-                                            <Fragment>
+                                            <Fragment key={`photo.${index}.dog.${index}`}>
                                                 <br/>
                                                 Dog #{index + 1} - Breed: {dog.breed} - Size: {dog.size} - Colours: {dog.colour.join(', ')}
                                             </Fragment>
