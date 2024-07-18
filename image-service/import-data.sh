@@ -1,6 +1,6 @@
 # convert output of machine learning model to JSON Lines (jsonl)
-gzip -dk ../image-data/photo-results.json.gz
-gzip -dk ../image-data/photo-results-info.json.gz
+gzip -dkf ../image-data/photo-results.json.gz
+gzip -dkf ../image-data/photo-results-info.json.gz
 
 cat ../image-data/photo-results.json | jq .photos | tr -d '\n' | jq -c '.[]' > data.jsonl
 cat ../image-data/photo-results-info.json | jq .photos | tr -d '\n' | jq -c '.[]' > data-info.jsonl
@@ -10,7 +10,7 @@ if [ ! -f target/image-service.jar ]; then
   mvn clean package
 fi
 
-java -cp target/image-service.jar com.mycodefu.DogInfoCleaner
+java -cp target/image-service.jar com.mycodefu.util.DogInfoCleaner
 mv data-info.jsonl data-info-pre-cleaned.jsonl
 mv data-info-cleaned.jsonl data-info.jsonl
 

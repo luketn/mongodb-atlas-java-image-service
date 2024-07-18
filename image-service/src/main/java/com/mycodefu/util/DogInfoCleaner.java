@@ -1,7 +1,5 @@
-package com.mycodefu;
+package com.mycodefu.util;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.mycodefu.data.Colours;
 import com.mycodefu.data.DogSize;
 
