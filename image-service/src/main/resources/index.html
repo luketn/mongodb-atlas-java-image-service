@@ -116,6 +116,7 @@
     function App() {
         const [summaryQuery, setSummaryQuery] = useState("");
         const [photos, setPhotos] = useState([]);
+        const [facets, setFacets] = useState(null);
         const [colours, setColours] = useState([]);
         const [mode, setMode] = useState('Fuzzy'); //enum TextMode {Fuzzy, QueryString, WildCard, Phrase}
         const [selectedColours, setSelectedColours] = useState([]); //['red', 'blue'
@@ -143,13 +144,12 @@
             fetch(encodeURI(`${domain}/photos/?mode=${mode}&summary=${summaryQuery}${coloursParam}`))
                 .then(response => {
                     if (response.status === 400) {
-                        setPhotoSearchError(null);
-                        return {photos: []};
+                        return {photos: [], facets: null, error: null};
                     } else if (response.status === 500) {
-                        response.text().then(t=>setPhotoSearchError(t));
-                        return {photos: []};
+                        return response.text().then(error=>{
+                            return {photos: [], facets: null, error: error};
+                        });
                     } else if (response.status === 200) {
-                        setPhotoSearchError(null);
                         return response.json();
                     } else {
                         throw new Error('Something went wrong', response);
@@ -157,6 +157,8 @@
                 })
                 .then(data => {
                     setPhotos(data.photos);
+                    setFacets(data.facets);
+                    setPhotoSearchError(data.error);
                 })
         }, [summaryQuery, selectedColours, mode]);
 
