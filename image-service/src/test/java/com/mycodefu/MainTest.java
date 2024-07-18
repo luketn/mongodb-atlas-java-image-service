@@ -113,4 +113,24 @@ class MainTest extends AtlasMongoDBTest {
         assertEquals(1, result.photos().size());
         assertEquals("Two white whippets standing in a grassy area with trees in the background.", result.photos().get(0).summary());
     }
+    @Test
+    void handleRequest_no_query() {
+        APIGatewayV2HTTPResponse apiGatewayV2HTTPResponse = new Main().handleRequest(APIGatewayV2HTTPEvent.builder()
+                .withRequestContext(APIGatewayV2HTTPEvent.RequestContext.builder()
+                        .withHttp(APIGatewayV2HTTPEvent.RequestContext.Http.builder()
+                                .withMethod("GET")
+                                .withPath("/photos")
+                                .build())
+                        .build())
+                .withQueryStringParameters(Map.of())
+                .withIsBase64Encoded(false)
+                .build(), null);
+
+        assertNotNull(apiGatewayV2HTTPResponse);
+        assertEquals(200, apiGatewayV2HTTPResponse.getStatusCode());
+        assertFalse(apiGatewayV2HTTPResponse.getIsBase64Encoded());
+        String body = apiGatewayV2HTTPResponse.getBody();
+        PhotoResults result = fromJson(body, PhotoResults.class);
+        assertEquals(2, result.photos().size());
+    }
 }

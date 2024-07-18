@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static com.mycodefu.atlas.AggregateQueries.*;
 import static com.mycodefu.atlas.MongoConnection.connection;
 import static com.mycodefu.util.Serializer.toJson;
 
@@ -38,7 +39,6 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
             log.trace("Received request:\n{}", toJson(apiGatewayV2HTTPEvent));
         }
 
-        //return cacheable options
         String method = apiGatewayV2HTTPEvent.getRequestContext().getHttp().getMethod();
         String path = apiGatewayV2HTTPEvent.getRequestContext().getHttp().getPath();
         if (path.length() > 1 && path.endsWith("/")) {
@@ -73,6 +73,7 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                             MongoCollection<Photo> photosCollection = imageSearch.getCollection("photo", Photo.class);
 
                             //Perform Atlas Search query
+                            List<Bson> query;
                             if (
                                  (caption == null || caption.isEmpty())
                                  && (summary == null || summary.isEmpty())
@@ -81,29 +82,25 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                                  && breeds == null
                                  && sizes == null
                             ) {
-                                return APIGatewayV2HTTPResponse.builder()
-                                        .withStatusCode(400)
-                                        .withBody("Must provide at least one query parameter")
-                                        .build();
+                                query = List.of(
+                                        limit_5,
+                                        id_to_string,
+                                        photos_projection
+                                );
+                            } else {
+                                query = AtlasSearchBuilder.builder()
+                                        .withCaption(caption)
+                                        .withSummary(summary)
+                                        .hasPerson(hasPerson)
+                                        .withColours(colours)
+                                        .withBreeds(breeds)
+                                        .withSizes(sizes)
+                                        .build(
+                                                limit_5,
+                                                id_to_string,
+                                                photos_projection
+                                        );
                             }
-                            List<Bson> query = AtlasSearchBuilder.builder()
-                                    .withCaption(caption)
-                                    .withSummary(summary)
-                                    .hasPerson(hasPerson)
-                                    .withColours(colours)
-                                    .withBreeds(breeds)
-                                    .withSizes(sizes)
-                                    .build(
-                                            Aggregates.limit(5),
-                                            Aggregates.addFields(
-                                                    new Field<>("id", new Document("$toString", "$_id"))
-                                            ),
-                                            Aggregates.project(
-                                                    new Document()
-                                                            .append("_id", 0)
-                                                            .append("runData", 0)
-                                            )
-                                    );
 
                             //Log the query
                             if (log.isTraceEnabled()) {
@@ -121,7 +118,7 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                                 );
                             }
 
-                                AggregateIterable<Photo> photosIterator = photosCollection.aggregate(query);
+                            AggregateIterable<Photo> photosIterator = photosCollection.aggregate(query);
                             ArrayList<Photo> photos = photosIterator.into(new ArrayList<>());
 
                             //serialise to JSON
