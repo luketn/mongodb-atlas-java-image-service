@@ -9,46 +9,6 @@
     <script src="https://unpkg.com/react-beautiful-dnd@13.1.1/dist/react-beautiful-dnd.min.js"></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
     <style>
-        .MuiSlider-root {
-            margin-top: 40px;
-        }
-
-        .risk-low {
-            background-color: #97e397;
-        }
-
-        .risk-medium {
-            background-color: #eebe8f;
-        }
-
-        .risk-high {
-            background-color: #ec9595;
-        }
-
-        .risk-critical {
-            background-color: #e37ae3;
-        }
-
-        .bar-buttons {
-            color: white;
-        }
-
-        .bar-divider {
-            background: white;
-        }
-
-        .slider-red .MuiSlider-track {
-            background-color: red;
-        }
-
-        .slider-amber .MuiSlider-track {
-            background-color: orange;
-        }
-
-        .slider-green .MuiSlider-track {
-            background-color: green;
-        }
-
         @media print {
             overflow: visible;
 
@@ -163,7 +123,7 @@
         }, [summaryQuery, selectedColours, mode]);
 
         function colourCount(colour) {
-            if (facets && facets.facet.colours.buckets) {
+            if (facets && facets?.facet?.colours?.buckets) {
                 return facets.facet.colours.buckets.find(bucket => bucket._id === colour)?.count || 0;
             }
             return 0;
