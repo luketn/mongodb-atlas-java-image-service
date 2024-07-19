@@ -141,6 +141,11 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                             Document facetCounts = facetIterator.first();
 
                             PhotoResults photoResults = new PhotoResults(photos, facetCounts);
+
+                            if (log.isTraceEnabled()) {
+                                log.trace("Result - photo count: {}, totalResultCount: {}", photoResults.photos().size(), ((Document)photoResults.facets().getOrDefault("count", new Document())).getOrDefault("lowerBound", 0));
+                            }
+
                             json = toJson(photoResults);
 
                         } catch (MongoCommandException e) {
