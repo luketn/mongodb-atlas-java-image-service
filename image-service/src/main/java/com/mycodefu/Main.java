@@ -9,10 +9,7 @@ import com.mongodb.client.*;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Field;
 import com.mycodefu.atlas.AtlasSearchBuilder;
-import com.mycodefu.data.Colours;
-import com.mycodefu.data.Photo;
-import com.mycodefu.data.PhotoResults;
-import com.mycodefu.data.TextMode;
+import com.mycodefu.data.*;
 import org.bson.*;
 import org.bson.conversions.Bson;
 import org.slf4j.Logger;
@@ -24,10 +21,12 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static com.mongodb.client.model.Filters.ne;
 import static com.mycodefu.atlas.AggregateQueries.*;
 import static com.mycodefu.atlas.MongoConnection.connection;
 import static com.mycodefu.util.Serializer.toJson;
@@ -53,6 +52,29 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                     case "/colours": {
                         String json;
                         json = toJson(Colours.allowed);
+                        return APIGatewayV2HTTPResponse.builder()
+                                .withStatusCode(200)
+                                .withBody(json)
+                                .build();
+                    }
+                    case "/sizes": {
+                        List<String> sizes = Arrays.stream(DogSize.values()).map(Enum::name).collect(Collectors.toList());
+                        String json = toJson(sizes);
+                        return APIGatewayV2HTTPResponse.builder()
+                                .withStatusCode(200)
+                                .withBody(json)
+                                .build();
+                    }
+                    case "/breeds": {
+                        ArrayList<String> breeds = connection()
+                                .getDatabase("ImageSearch")
+                                .getCollection("photo")
+                                .distinct("breeds", String.class)
+                                .filter(ne("breeds", null))
+                                .map(String::trim)
+                                .into(new ArrayList<>());
+
+                        String json = toJson(breeds);
                         return APIGatewayV2HTTPResponse.builder()
                                 .withStatusCode(200)
                                 .withBody(json)

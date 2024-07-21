@@ -12,6 +12,7 @@ import org.testcontainers.containers.AtlasMongoDBTest;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -132,5 +133,26 @@ class MainTest extends AtlasMongoDBTest {
         String body = apiGatewayV2HTTPResponse.getBody();
         PhotoResults result = fromJson(body, PhotoResults.class);
         assertEquals(2, result.photos().size());
+    }
+
+    @Test
+    public void colours_api() {
+        APIGatewayV2HTTPResponse apiGatewayV2HTTPResponse = new Main().handleRequest(APIGatewayV2HTTPEvent.builder()
+                .withRequestContext(APIGatewayV2HTTPEvent.RequestContext.builder()
+                        .withHttp(APIGatewayV2HTTPEvent.RequestContext.Http.builder()
+                                .withMethod("GET")
+                                .withPath("/colours")
+                                .build())
+                        .build())
+                .withIsBase64Encoded(false)
+                .build(), null);
+
+        assertNotNull(apiGatewayV2HTTPResponse);
+        assertEquals(200, apiGatewayV2HTTPResponse.getStatusCode());
+        assertFalse(apiGatewayV2HTTPResponse.getIsBase64Encoded());
+        String body = apiGatewayV2HTTPResponse.getBody();
+        List<String> colours = fromJson(body, ArrayList.class);
+        assertEquals(Colours.allowed.size(), colours.size());
+        assertTrue(colours.containsAll(Colours.allowed));
     }
 }
