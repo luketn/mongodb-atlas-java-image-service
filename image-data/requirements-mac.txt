@@ -1,4 +1,5 @@
 torch
 torchvision
 torchaudio
+einops
 -r requirements.txt
