@@ -9,46 +9,6 @@
     <script src="https://unpkg.com/react-beautiful-dnd@13.1.1/dist/react-beautiful-dnd.min.js"></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
     <style>
-        .MuiSlider-root {
-            margin-top: 40px;
-        }
-
-        .risk-low {
-            background-color: #97e397;
-        }
-
-        .risk-medium {
-            background-color: #eebe8f;
-        }
-
-        .risk-high {
-            background-color: #ec9595;
-        }
-
-        .risk-critical {
-            background-color: #e37ae3;
-        }
-
-        .bar-buttons {
-            color: white;
-        }
-
-        .bar-divider {
-            background: white;
-        }
-
-        .slider-red .MuiSlider-track {
-            background-color: red;
-        }
-
-        .slider-amber .MuiSlider-track {
-            background-color: orange;
-        }
-
-        .slider-green .MuiSlider-track {
-            background-color: green;
-        }
-
         @media print {
             overflow: visible;
 
@@ -111,11 +71,16 @@
     } = MaterialUI;
     const { DragDropContext, Droppable, Draggable } = window.ReactBeautifulDnd;
 
+
+
     function App() {
         const [summaryQuery, setSummaryQuery] = useState("");
         const [photos, setPhotos] = useState([]);
+        const [facets, setFacets] = useState(null);
         const [colours, setColours] = useState([]);
+        const [mode, setMode] = useState('Fuzzy'); //enum TextMode {Fuzzy, QueryString, WildCard, Phrase}
         const [selectedColours, setSelectedColours] = useState([]); //['red', 'blue'
+        const [photoSearchError, setPhotoSearchError] = useState(null);
 
         const domain = document.location.host.indexOf('localhost') === 0 ? 'http://localhost:8001' : '';
 
@@ -136,10 +101,14 @@
         //call the service /photos/?caption=123
         useEffect(() => {
             let coloursParam = selectedColours.length > 0 ? `&colours=${selectedColours.join(',')}` : '';
-            fetch(`${domain}/photos/?summary=${summaryQuery}${coloursParam}`)
+            fetch(encodeURI(`${domain}/photos/?mode=${mode}&summary=${summaryQuery}${coloursParam}`))
                 .then(response => {
                     if (response.status === 400) {
-                        return {photos: []};
+                        return {photos: [], facets: null, error: null};
+                    } else if (response.status === 500) {
+                        return response.text().then(error=>{
+                            return {photos: [], facets: null, error: error};
+                        });
                     } else if (response.status === 200) {
                         return response.json();
                     } else {
@@ -148,8 +117,17 @@
                 })
                 .then(data => {
                     setPhotos(data.photos);
+                    setFacets(data.facets);
+                    setPhotoSearchError(data.error);
                 })
-        }, [summaryQuery, selectedColours]);
+        }, [summaryQuery, selectedColours, mode]);
+
+        function colourCount(colour) {
+            if (facets && facets?.facet?.colours?.buckets) {
+                return facets.facet.colours.buckets.find(bucket => bucket._id === colour)?.count || 0;
+            }
+            return 0;
+        }
 
         return (
             <div
@@ -170,14 +148,23 @@
                             value={summaryQuery}
                             onChange={(e) => setSummaryQuery(e.target.value)}
                         />
+                        <FormControl component="fieldset">
+                            <RadioGroup row aria-label="mode" name="mode" value={mode} onChange={(e) => setMode(e.target.value)}>
+                                <FormControlLabel key={"fuzzy"} value="Fuzzy" control={<Radio />} label="Fuzzy" />
+                                <FormControlLabel key={"queryString"} value="QueryString" control={<Radio />} label="Query String" />
+                                <FormControlLabel key={"wildcard"} value="WildCard" control={<Radio />} label="Wild Card" />
+                                <FormControlLabel key={"phrase"} value="Phrase" control={<Radio />} label="Phrase" />
+                            </RadioGroup>
+                        </FormControl>
                         </Box>
+                        <Box><Typography color={'error'}>{`${photoSearchError || ''}`}</Typography></Box>
                     </Grid>
                     <Grid item xs={2}>
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                            <Typography variant="h7" color="textSecondary">Colour filter:</Typography>
-                            {colours.map(colour => (
+                            <Typography color="textSecondary">Colour filter:</Typography>
+                            {colours.map((colour, index) => (
                                 //check boxes for a list of selected colours
-                                <FormControl key={colour}>
+                                <FormControl key={`colour.${colour}`}>
                                     <FormControlLabel
                                         control={
                                             <Checkbox
@@ -192,15 +179,15 @@
                                                 name={colour}
                                             />
                                         }
-                                        label={colour}
+                                        label={`${colour} (${colourCount(colour)})`}
                                     />
                                 </FormControl>
                             ))}
                         </Box>
                     </Grid>
                     <Grid item xs={10}>
-                        {photos.map(photo => (
-                            <Box key={photo.url} sx={{display: 'flex', padding: '5px'}}>
+                        {photos.map((photo, index) => (
+                            <Box key={`photo.${index}`} sx={{display: 'flex', padding: '5px'}}>
                                     <Box
                                         component="img"
                                         sx={{ maxWidth: 200, marginRight: '1rem' }}
@@ -210,7 +197,7 @@
                                     <Typography variant="body2" color="textPrimary">
                                         {photo.summary} {photo.hasPerson ? " (Has Person)" : " (No Person)"}
                                         {photo.dogs.map((dog, index) => (
-                                            <Fragment>
+                                            <Fragment key={`photo.${index}.dog.${index}`}>
                                                 <br/>
                                                 Dog #{index + 1} - Breed: {dog.breed} - Size: {dog.size} - Colours: {dog.colour.join(', ')}
                                             </Fragment>

@@ -14,18 +14,35 @@ import static com.mongodb.client.model.search.SearchOperator.compound;
 
 public class AtlasSearchUtils {
 
-    public static SearchOperator fuzzyText(String path, String text) {
+    public static SearchOperator fuzzyText(String path, String query) {
         return SearchOperator.of(new Document("text", new Document()
                 .append("path", path)
-                .append("query", text)
-                .append("fuzzy", new Document())
+                .append("query", query)
+                .append("fuzzy", new Document(
+                        "maxEdits", 1
+                ))
         ));
     }
 
-    public static SearchOperator phrase(String path, String phrase) {
+    public static SearchOperator phrase(String path, String query) {
         return SearchOperator.of(new Document("phrase", new Document()
                 .append("path", path)
-                .append("query", phrase)
+                .append("query", query)
+        ));
+    }
+
+    public static SearchOperator wildcard(String path, String query) {
+        return SearchOperator.of(new Document("wildcard", new Document()
+                .append("path", path)
+                .append("query", query)
+                .append("allowAnalyzedField", true)
+        ));
+    }
+
+    public static SearchOperator queryString(String defaultPath, String query) {
+        return SearchOperator.of(new Document("queryString", new Document()
+                .append("defaultPath", defaultPath)
+                .append("query", query)
         ));
     }
 

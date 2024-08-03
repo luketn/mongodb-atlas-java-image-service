@@ -1,9 +1,13 @@
-FROM python:3.9-slim-buster
+FROM public.ecr.aws/lambda/python:3.12
 
-RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
-RUN pip install --no-cache-dir transformers
+#install dependencies
+ADD requirements.txt ${LAMBDA_TASK_ROOT}
+RUN pip install --no-cache-dir -r requirements.txt
 
-WORKDIR /phi3
-ADD main.py ./
+#download the model
+ADD download-model.py ${LAMBDA_TASK_ROOT}
+RUN python download-model.py
 
-ENTRYPOINT ["python", "main.py"]
+#setup the lambda function handler
+ADD main.py ${LAMBDA_TASK_ROOT}
+CMD [ "main.handler" ]

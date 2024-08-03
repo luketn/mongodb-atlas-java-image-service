@@ -4,14 +4,12 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.mongodb.MongoCommandException;
 import com.mongodb.client.*;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Field;
 import com.mycodefu.atlas.AtlasSearchBuilder;
-import com.mycodefu.data.Colours;
-import com.mycodefu.data.Photo;
-import com.mycodefu.data.PhotoResults;
+import com.mycodefu.data.*;
 import org.bson.*;
 import org.bson.conversions.Bson;
 import org.slf4j.Logger;
@@ -23,33 +21,25 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.mycodefu.data.Serializer.objectMapper;
+import static com.mongodb.client.model.Filters.ne;
+import static com.mycodefu.atlas.AggregateQueries.*;
+import static com.mycodefu.atlas.MongoConnection.connection;
+import static com.mycodefu.util.Serializer.toJson;
 
 public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResponse> {
-    public static final String CONNECTION_STRING = System.getenv("CONNECTION_STRING") != null ? System.getenv("CONNECTION_STRING") : "mongodb://localhost:27017/directConnection=true";
     private static final Logger log = LoggerFactory.getLogger(Main.class);
-
-    private static MongoClient connect() {
-        long start = System.currentTimeMillis();
-        MongoClient mongoClient = MongoClients.create(CONNECTION_STRING);
-        long end = System.currentTimeMillis();
-
-        log.info("Connected to MongoDB at {} in {}ms", CONNECTION_STRING.replaceAll("://.*@", "://<redacted>@"), end - start);
-        return mongoClient;
-    }
-    public static final MongoClient MONGO_CLIENT = connect();
 
     @Override
     public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent apiGatewayV2HTTPEvent, Context context) {
         if (log.isTraceEnabled()) {
-            log.trace("Received request:\n{}", apiGatewayV2HTTPEvent);
+            log.trace("Received request:\n{}", toJson(apiGatewayV2HTTPEvent));
         }
 
-        //return cacheable options
         String method = apiGatewayV2HTTPEvent.getRequestContext().getHttp().getMethod();
         String path = apiGatewayV2HTTPEvent.getRequestContext().getHttp().getPath();
         if (path.length() > 1 && path.endsWith("/")) {
@@ -61,12 +51,30 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                 switch (path) {
                     case "/colours": {
                         String json;
-                        try {
-                            json = objectMapper.writeValueAsString(Colours.allowed);
-                        } catch (JsonProcessingException e) {
-                            log.error("Error serialising colours", e);
-                            throw new RuntimeException(e);
-                        }
+                        json = toJson(Colours.allowed);
+                        return APIGatewayV2HTTPResponse.builder()
+                                .withStatusCode(200)
+                                .withBody(json)
+                                .build();
+                    }
+                    case "/sizes": {
+                        List<String> sizes = Arrays.stream(DogSize.values()).map(Enum::name).collect(Collectors.toList());
+                        String json = toJson(sizes);
+                        return APIGatewayV2HTTPResponse.builder()
+                                .withStatusCode(200)
+                                .withBody(json)
+                                .build();
+                    }
+                    case "/breeds": {
+                        ArrayList<String> breeds = connection()
+                                .getDatabase("ImageSearch")
+                                .getCollection("photo")
+                                .distinct("breeds", String.class)
+                                .filter(ne("breeds", null))
+                                .map(String::trim)
+                                .into(new ArrayList<>());
+
+                        String json = toJson(breeds);
                         return APIGatewayV2HTTPResponse.builder()
                                 .withStatusCode(200)
                                 .withBody(json)
@@ -78,6 +86,8 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                             //get the caption query string parameter
                             String caption = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("caption", null);
                             String summary = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("summary", null);
+                            String modeString = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("mode", null);
+                            TextMode mode = modeString != null ? TextMode.valueOf(modeString) : TextMode.Fuzzy;
                             String hasPersonString = apiGatewayV2HTTPEvent.getQueryStringParameters().getOrDefault("hasPerson", null);
                             Boolean hasPerson = hasPersonString != null ? Boolean.parseBoolean(hasPersonString) : null;
                             List<String> colours = getStringListQueryParams(apiGatewayV2HTTPEvent, "colours");
@@ -85,7 +95,7 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                             List<String> sizes = getStringListQueryParams(apiGatewayV2HTTPEvent, "sizes");
 
                             //Get the MongoDB collection
-                            MongoDatabase imageSearch = MONGO_CLIENT.getDatabase("ImageSearch");
+                            MongoDatabase imageSearch = connection().getDatabase("ImageSearch");
                             MongoCollection<Photo> photosCollection = imageSearch.getCollection("photo", Photo.class);
 
                             //Perform Atlas Search query
@@ -97,31 +107,23 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                                  && breeds == null
                                  && sizes == null
                             ) {
-                                return APIGatewayV2HTTPResponse.builder()
-                                        .withStatusCode(400)
-                                        .withBody("Must provide at least one query parameter")
-                                        .build();
+                                caption = "*";
+                                mode = TextMode.WildCard;
                             }
-                            List<Bson> query = AtlasSearchBuilder.builder()
-                                    .withCaption(caption)
-                                    .withSummary(summary)
+
+                            AtlasSearchBuilder atlasSearchBuilder = AtlasSearchBuilder.builder()
+                                    .withCaption(caption, mode)
+                                    .withSummary(summary, mode)
                                     .hasPerson(hasPerson)
                                     .withColours(colours)
                                     .withBreeds(breeds)
-                                    .withSizes(sizes)
-                                    .build(
-                                            Aggregates.limit(5),
-                                            Aggregates.addFields(
-                                                    new Field<>("id", new Document("$toString", "$_id"))
-                                            ),
-                                            Aggregates.project(
-                                                    new Document()
-                                                            .append("_id", 0)
-                                                            .append("runData", 0)
-                                            )
+                                    .withSizes(sizes);
+                            List<Bson> query = atlasSearchBuilder.build(
+                                            limit_5,
+                                            id_to_string,
+                                            photos_projection
                                     );
 
-                            //Log the query
                             if (log.isTraceEnabled()) {
                                 var aggregateClauses = query
                                         .stream()
@@ -140,10 +142,40 @@ public class Main implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2H
                             AggregateIterable<Photo> photosIterator = photosCollection.aggregate(query);
                             ArrayList<Photo> photos = photosIterator.into(new ArrayList<>());
 
-                            //serialise to JSON
-                            PhotoResults photoResults = new PhotoResults(photos);
-                            json = objectMapper.writeValueAsString(photoResults);
+                            List<Bson> facetQuery = atlasSearchBuilder.buildForFacetCounts();
+                            if (log.isTraceEnabled()) {
+                                var aggregateClauses = facetQuery
+                                        .stream()
+                                        .map(bson -> bson.toBsonDocument().toJson())
+                                        .collect(Collectors.joining(",\n    "))
+                                        ;
+                                log.trace("""
+                                        Atlas Search query:
+                                          db.photo.aggregate([
+                                            %s
+                                          ])
+                                        """.formatted(aggregateClauses)
+                                );
+                            }
 
+                            MongoCollection<Document> photosCollectionForFaceting = imageSearch.getCollection("photo", Document.class);
+                            AggregateIterable<Document> facetIterator = photosCollectionForFaceting.aggregate(facetQuery);
+                            Document facetCounts = facetIterator.first();
+
+                            PhotoResults photoResults = new PhotoResults(photos, facetCounts);
+
+                            if (log.isTraceEnabled()) {
+                                log.trace("Result - photo count: {}, totalResultCount: {}", photoResults.photos().size(), ((Document)photoResults.facets().getOrDefault("count", new Document())).getOrDefault("lowerBound", 0));
+                            }
+
+                            json = toJson(photoResults);
+
+                        } catch (MongoCommandException e) {
+                            log.error("Error in /photos api", e);
+                            return APIGatewayV2HTTPResponse.builder()
+                                    .withStatusCode(500)
+                                    .withBody("Error: " + e.getErrorMessage())
+                                    .build();
                         } catch (Exception e) {
                             log.error("Error in /photos api", e);
                             return APIGatewayV2HTTPResponse.builder()

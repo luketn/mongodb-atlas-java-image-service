@@ -1,13 +1,8 @@
 # create the atlas search index
-mongosh < create-index.js
+INDEX="$(cat create-index.json)"
+INDEX=$(echo $INDEX | tr -d '\n')
+INDEX=$(echo $INDEX | tr -d ' ')
+SCRIPT_WITH_INDEX="$(sed -e "s/INDEX_GOES_HERE/$INDEX/g" create-index.js)"
 
-# example search: db.getCollection("photos").aggregate([
-#    {$search: {
-#  index: "default",
-#  text: {
-#    query: "french",
-#    path: "caption",
-#    fuzzy: {}
-#  }
-#}}
-#])
+echo "Creating index with script:\n${SCRIPT_WITH_INDEX}"
+echo $SCRIPT_WITH_INDEX | mongosh

@@ -1,0 +1,9 @@
+/venv/
+/.idea/
+/node_modules/
+/.serverless/
+
+*.sh
+*.json
+*.yml
+
