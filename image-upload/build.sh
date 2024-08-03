@@ -1,6 +1,6 @@
 set -e
 
-docker build -t image-upload .
+docker build --platform linux/arm64 -t image-upload .
 docker images --filter reference=image-upload:latest
 
 if [ -z "$DOCKER_TAG" ]; then

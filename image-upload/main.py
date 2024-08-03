@@ -34,8 +34,10 @@ def run_model():
     generate_ids = generate_ids[:, inputs['input_ids'].shape[1]:]
     response = processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
 
-    print(response)
+    return response
 
 
 def handler(event, context):
-    return 'Hello from AWS Lambda using Python' + sys.version + '!'
+    return run_model()
+
+print(handler({}, {}))
