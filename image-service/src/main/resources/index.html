@@ -78,8 +78,10 @@
         const [photos, setPhotos] = useState([]);
         const [facets, setFacets] = useState(null);
         const [colours, setColours] = useState([]);
+        const [sizes, setSizes] = useState([]);
         const [mode, setMode] = useState('Fuzzy'); //enum TextMode {Fuzzy, QueryString, WildCard, Phrase}
-        const [selectedColours, setSelectedColours] = useState([]); //['red', 'blue'
+        const [selectedColours, setSelectedColours] = useState([]); //['red', 'blue']
+        const [selectedSizes, setSelectedSizes] = useState([]); //['Small', 'Large']
         const [photoSearchError, setPhotoSearchError] = useState(null);
 
         const domain = document.location.host.indexOf('localhost') === 0 ? 'http://localhost:8001' : '';
@@ -98,10 +100,25 @@
                 })
         }, []);
 
+        useEffect(() => {
+            fetch(`${domain}/sizes`)
+                .then(response => {
+                    if (response.status === 200) {
+                        return response.json();
+                    } else {
+                        throw new Error('Something went wrong', response);
+                    }
+                })
+                .then(data => {
+                    setSizes(data);
+                })
+        }, []);
+
         //call the service /photos/?caption=123
         useEffect(() => {
             let coloursParam = selectedColours.length > 0 ? `&colours=${selectedColours.join(',')}` : '';
-            fetch(encodeURI(`${domain}/photos/?mode=${mode}&summary=${summaryQuery}${coloursParam}`))
+            let sizesParam = selectedSizes.length > 0 ? `&sizes=${selectedSizes.join(',')}` : '';
+            fetch(encodeURI(`${domain}/photos/?mode=${mode}&summary=${summaryQuery}${coloursParam}${sizesParam}`))
                 .then(response => {
                     if (response.status === 400) {
                         return {photos: [], facets: null, error: null};
@@ -120,11 +137,18 @@
                     setFacets(data.facets);
                     setPhotoSearchError(data.error);
                 })
-        }, [summaryQuery, selectedColours, mode]);
+        }, [summaryQuery, selectedColours, selectedSizes, mode]);
 
         function colourCount(colour) {
             if (facets && facets?.facet?.colours?.buckets) {
                 return facets.facet.colours.buckets.find(bucket => bucket._id === colour)?.count || 0;
+            }
+            return 0;
+        }
+
+        function sizeCount(size) {
+            if (facets && facets?.facet?.sizes?.buckets) {
+                return facets.facet.sizes.buckets.find(bucket => bucket._id === size)?.count || 0;
             }
             return 0;
         }
@@ -161,7 +185,7 @@
                     </Grid>
                     <Grid item xs={2}>
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                            <Typography color="textSecondary">Colour filter:</Typography>
+                            <Typography color="textSecondary">Colour:</Typography>
                             {colours.map((colour, index) => (
                                 //check boxes for a list of selected colours
                                 <FormControl key={`colour.${colour}`}>
@@ -180,6 +204,28 @@
                                             />
                                         }
                                         label={`${colour} (${colourCount(colour)})`}
+                                    />
+                                </FormControl>
+                            ))}
+                            <Typography color="textSecondary">Size:</Typography>
+                            {sizes.map((size, index) => (
+                                //check boxes for a list of selected colours
+                                <FormControl key={`size.${size}`}>
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                checked={selectedSizes.includes(size)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedSizes([...selectedSizes, size]);
+                                                    } else {
+                                                        setSelectedSizes(selectedSizes.filter(s => s !== size));
+                                                    }
+                                                }}
+                                                name={size}
+                                            />
+                                        }
+                                        label={`${size} (${sizeCount(size)})`}
                                     />
                                 </FormControl>
                             ))}
