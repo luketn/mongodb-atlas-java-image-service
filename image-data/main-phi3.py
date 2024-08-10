@@ -1,5 +1,6 @@
 import json
 import os
+import platform
 from datetime import datetime
 
 import torch
@@ -10,17 +11,33 @@ from PIL import Image
 QUICK_RUN = False
 
 kwargs = {'torch_dtype': torch.bfloat16}
-model_id = "microsoft/Phi-3-vision-128k-instruct"
 
+model_id = "microsoft/Phi-3-vision-128k-instruct"
 processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=True)
-model = AutoModelForCausalLM.from_pretrained(model_id, device_map="cuda", trust_remote_code=True, torch_dtype="auto", _attn_implementation='flash_attention_2') # use _attn_implementation='eager' to disable flash attention
+if torch.cuda.is_available():
+    print("Running on NVIDIA GPU")
+    device = torch.device("cuda", 0)
+    model = AutoModelForCausalLM.from_pretrained(model_id, device_map="cuda", trust_remote_code=True, torch_dtype="auto", _attn_implementation="flash_attention_2").to(device)
+    gpu_details = os.popen('nvidia-smi').read().split('\n')
+# Phi3 does not support Apple M1 GPU (yet)
+# elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
+#     print("Running on Apple M1 GPU")
+#     device = torch.device("mps")
+#     model = AutoModelForCausalLM.from_pretrained(model_name, device_map="mps", trust_remote_code=True, torch_dtype="auto", _attn_implementation="eager").to(device)
+#     gpu_details = os.popen('system_profiler SPDisplaysDataType').read().split('\n')
+else:
+    print("Running on CPU. Expect __VERY__ slow performance.")
+    device = torch.device("cpu")
+    model = AutoModelForCausalLM.from_pretrained(model_id, device_map="cpu", trust_remote_code=True, torch_dtype="auto", _attn_implementation="eager").to(device)
+    if platform.system() == 'Darwin':
+        gpu_details = os.popen('system_profiler SPDisplaysDataType').read().split('\n')
+    else:
+        gpu_details = None
 
 user_prompt = '<|user|>\n'
 assistant_prompt = '<|assistant|>\n'
 prompt_suffix = "<|end|>\n"
 
-# get some details about the current GPU
-gpu_details = os.popen('nvidia-smi').read().split('\n')
 machine_details = {
     'model_id': model_id,
     'gpu_details': gpu_details,
@@ -31,7 +48,7 @@ path_data_raw = open("photos.json").read()
 path_data = json.loads(path_data_raw)
 
 # open a JSON file with list of photos _already_ processed
-if os.path.exists("photo-results.json"):
+if not QUICK_RUN and os.path.exists("photo-results.json"):
     last_run_captions_raw = open("photo-results.json").read()
     last_run_captions = json.loads(last_run_captions_raw)
     # move file to last-run{date}.json (overwriting any existing file)
@@ -65,7 +82,7 @@ write_results_to_file()
 
 def run_phi3_vision(task):
     prompt = f"{user_prompt}<|image_1|>\n{task}{prompt_suffix}{assistant_prompt}"
-    inputs = processor(prompt, image, return_tensors="pt").to("cuda:0")
+    inputs = processor(prompt, image, return_tensors="pt").to(device)
 
     generate_ids = model.generate(**inputs,
                                   max_new_tokens=1000,
