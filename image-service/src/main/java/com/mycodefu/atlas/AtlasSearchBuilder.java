@@ -99,21 +99,27 @@ public class AtlasSearchBuilder {
 
     public AtlasSearchBuilder withColours(List<String> colours) {
         if (colours != null && !colours.isEmpty()) {
-            must.add(in("colours", colours));
+            for (String colour : colours) {
+                must.add(isEqual("colours", colour));
+            }
         }
         return this;
     }
 
     public AtlasSearchBuilder withBreeds(List<String> breeds) {
         if (breeds != null && !breeds.isEmpty()) {
-            must.add(in("breeds", breeds));
+            for (String breed : breeds) {
+                must.add(isEqual("breeds", breed));
+            }
         }
         return this;
     }
 
     public AtlasSearchBuilder withSizes(List<String> sizes) {
         if (sizes != null && !sizes.isEmpty()) {
-            must.add(in("sizes", sizes));
+            for (String size : sizes) {
+                must.add(isEqual("sizes", size));
+            }
         }
         return this;
     }
