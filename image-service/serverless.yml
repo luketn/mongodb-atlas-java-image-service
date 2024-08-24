@@ -11,7 +11,7 @@ plugins:
 functions:
   image-process:
     environment:
-      CONNECTION_STRING: ${env:ATLAS_CONNECTION_STRING}
+      CONNECTION_STRING: "${env:ATLAS_CONNECTION_STRING}"
     url:
       cors: true
     image: "${env:REPOSITORY_TAG, '?????'}"

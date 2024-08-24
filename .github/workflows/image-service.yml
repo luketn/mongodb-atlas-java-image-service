@@ -46,6 +46,7 @@ jobs:
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: image-service
+          ATLAS_CONNECTION_STRING: ${{ secrets.ATLAS_CONNECTION_STRING }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
         run: ./build-deploy.sh
 
