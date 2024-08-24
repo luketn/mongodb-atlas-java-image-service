@@ -16,15 +16,15 @@ cp -r ./temp-build/* ./docker/code/
 rm -rf ./temp-build
 
 cd docker
-docker build -t image-service .
+docker build --platform linux/arm64 -t image-service .
 
-if [ -z "$DOCKER_TAG" ]; then
+if [ -z "$REPOSITORY_TAG" ]; then
   echo "DOCKER_TAG is not set. Exiting..."
   exit 1
 fi
 
-aws ecr --profile personal get-login-password --region ap-southeast-2  | docker login --username AWS --password-stdin 204244381428.dkr.ecr.ap-southeast-2.amazonaws.com
-REPOSITORY_TAG="204244381428.dkr.ecr.ap-southeast-2.amazonaws.com/image-service:${DOCKER_TAG}"
-REPOSITORY_TAG_LATEST="204244381428.dkr.ecr.ap-southeast-2.amazonaws.com/image-service:latest"
+if [ -z "$CI" ]; then
+  aws ecr --profile "${AWS_PROFILE}" get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${REGISTRY}"
+fi
 echo "$(date): Building and pushing ${REPOSITORY_TAG}..."
 docker buildx build --push -t "${REPOSITORY_TAG}" -t "${REPOSITORY_TAG_LATEST}" --platform linux/arm64 .
