@@ -27,4 +27,4 @@ if [ -z "$CI" ]; then
   aws ecr --profile "${AWS_PROFILE}" get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${REGISTRY}"
 fi
 echo "$(date): Building and pushing ${REPOSITORY_TAG}..."
-docker buildx build --push -t "${REPOSITORY_TAG}" -t "${REPOSITORY_TAG_LATEST}" --platform linux/arm64 .
+docker buildx build --platform linux/arm64 --push -t "${REPOSITORY_TAG}" -t "${REPOSITORY_TAG_LATEST}" .
