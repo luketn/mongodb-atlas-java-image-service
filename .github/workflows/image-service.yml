@@ -8,6 +8,7 @@ on:
       - '.github/workflows/image-service.yml'
       - 'image-service/src/**'
       - 'image-service/pom.xml'
+      - 'image-service/*.sh'
 
 jobs:
   ci:
