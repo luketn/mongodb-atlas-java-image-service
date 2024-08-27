@@ -28,3 +28,4 @@ if [ -z "$CI" ]; then
 fi
 echo "$(date): Building and pushing ${REPOSITORY_TAG}..."
 docker buildx build --platform linux/arm64 --push -t "${REPOSITORY_TAG}" --provenance=false .
+
